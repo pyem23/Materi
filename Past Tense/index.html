@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Rewind Past Tenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;800&family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;1,6..12,400;1,6..12,600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: "Rewind" — every tense lives on a timeline running left (past) to right (now).
+   Each tense owns one colour used everywhere: teal Simple Past (a point), violet Past Continuous (a wave),
+   raspberry Past Perfect (the earlier event). Reading = white cards; things to try = sunny "Coba" panels. */
+:root{
+  --bg:#f2f8fd; --card:#ffffff; --soft:#f1f5fa; --line:#dbe5f0; --edge:#14213d;
+  --text:#14213d; --muted:#56627a;
+  --sp:#0a7d8c; --sp-bg:#ddf4f6; --sp-bd:#8ed2da;
+  --pc:#5b40cc; --pc-bg:#ece8ff; --pc-bd:#bcaef4;
+  --pp:#b8285f; --pp-bg:#fde5ee; --pp-bd:#f0a3c1;
+  --prp:#b45f06; --prp-bg:#fff0dc; --prp-bd:#f2c48a;
+  --sun:#ffc935; --act-bg:#fff8df; --act-bd:#f3dc8c;
+  --ok:#11795a; --ok-bg:#dff4eb; --bad:#c22f35; --bad-bg:#fdeceb;
+  --display:"Outfit",system-ui,sans-serif;
+  --body:"Nunito Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:16px; --press:3px 3px 0 var(--edge); --lift:0 1px 2px rgba(20,33,61,.05),0 6px 18px rgba(20,33,61,.05);
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:clamp(15.5px,1.3vw + 10px,18px);line-height:1.6;
+  display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation}
+:focus-visible{outline:3px solid var(--pc);outline-offset:3px;border-radius:8px}
+p{margin:0;max-width:64ch}
+b,strong{font-weight:800}
+.muted{color:var(--muted)}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 8px calc(14px + env(safe-area-inset-left));background:var(--card)}
+.brand{font-family:var(--display);font-weight:800;font-size:1.15rem;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo{width:26px;height:26px;border-radius:50%;background:var(--sun);border:2px solid var(--edge);display:grid;place-items:center}
+.logo svg{width:14px;height:14px}
+.count{margin-left:auto;font-size:.8rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.iconbtn{min-width:44px;height:40px;padding:0 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:.82rem;font-weight:800;color:var(--text);text-decoration:none}
+.iconbtn:hover{border-color:var(--edge)}
+.iconbtn svg{width:18px;height:18px}
+@media (max-width:520px){.iconbtn .lbl{display:none}}
+
+/* chapter rail */
+.rail{display:flex;gap:6px;overflow-x:auto;padding:0 calc(14px + env(safe-area-inset-right)) 10px calc(14px + env(safe-area-inset-left));background:var(--card);border-bottom:1px solid var(--line);scrollbar-width:none;position:relative}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:34px;padding:4px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);font-size:.8rem;font-weight:800;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--line);display:inline-block}
+.chip.done i{background:var(--ok)}
+.chip.on{background:var(--edge);border-color:var(--edge);color:#fff}
+.chip.on i{background:var(--sun)}
+.bar{position:absolute;left:0;bottom:-1px;height:3px;background:linear-gradient(90deg,var(--pp),var(--pc),var(--sp));transition:width .35s ease}
+
+/* stage */
+#stage{position:relative;overflow:hidden}
+.slide{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:clamp(22px,4vw,46px) calc(16px + env(safe-area-inset-right)) 40px calc(16px + env(safe-area-inset-left));display:none}
+.slide.on{display:block;animation:in .38s ease both}
+@keyframes in{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.slide.back.on{animation-name:inb}
+@keyframes inb{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+
+.sh{display:flex;flex-direction:column;gap:8px}
+.eyebrow{font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.eyebrow .dotc{width:10px;height:10px;border-radius:50%}
+h1,h2,h3{font-family:var(--display);font-weight:800;line-height:1.08;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:clamp(2.9rem,10vw,5.8rem)}
+h2{font-size:clamp(1.65rem,4.2vw,2.5rem)}
+h3{font-size:clamp(1.1rem,2.4vw,1.3rem)}
+.lead{font-size:1.04em;color:var(--muted)}
+.lead b{color:var(--text)}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:clamp(14px,2.4vw,22px);box-shadow:var(--lift)}
+.ct{font-weight:800;display:block;margin-bottom:6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:14px}
+.stackv{display:flex;flex-direction:column;gap:10px}
+.note{border-radius:var(--r);padding:14px 16px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--muted);display:flex;flex-direction:column;gap:4px}
+.note.warn{border-left-color:var(--bad)} .note.warn>b:first-child{color:var(--bad)}
+.note.key{border-left-color:var(--sun);background:#fffaf0}
+.foot{font-size:.86rem;color:var(--muted)}
+ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+
+/* tense colour system */
+.t{font-weight:800;border-radius:7px;padding:0 .3em;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.t.sp{color:var(--sp);background:var(--sp-bg)} .t.pc{color:var(--pc);background:var(--pc-bg)} .t.pp{color:var(--pp);background:var(--pp-bg)} .t.prp{color:var(--prp);background:var(--prp-bg)}
+.mk{font-weight:800;border-bottom:2.5px solid var(--sun)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:.78rem;font-weight:800;border:1.5px solid}
+.pill.sp{color:var(--sp);background:var(--sp-bg);border-color:var(--sp-bd)} .pill.pc{color:var(--pc);background:var(--pc-bg);border-color:var(--pc-bd)} .pill.pp{color:var(--pp);background:var(--pp-bg);border-color:var(--pp-bd)} .pill.prp{color:var(--prp);background:var(--prp-bg);border-color:var(--prp-bd)}
+.tcard{border-top:6px solid}
+.tcard.sp{border-top-color:var(--sp)} .tcard.pc{border-top-color:var(--pc)} .tcard.pp{border-top-color:var(--pp)} .tcard.prp{border-top-color:var(--prp)}
+.formula{font-family:var(--display);font-weight:700;font-size:clamp(1.15rem,2.8vw,1.5rem);line-height:1.3}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{padding:4px 12px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-weight:700;font-size:.88rem}
+
+/* timeline svg */
+.tl{width:100%;height:auto;display:block}
+.tl text{font-family:var(--body);font-weight:800}
+
+/* activity */
+.activity{background:var(--act-bg);border:1.5px solid var(--act-bd);border-radius:20px;padding:clamp(14px,2.4vw,20px);display:flex;flex-direction:column;gap:14px}
+.act-head{display:flex;gap:10px;align-items:flex-start}
+.act-head p{font-weight:700;font-size:.95rem;padding-top:2px}
+.act-tag{flex:none;font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--edge);background:var(--sun);border:1.5px solid var(--edge);border-radius:999px;padding:3px 10px}
+.act-body{display:flex;flex-direction:column;gap:12px}
+.activity .card{box-shadow:none}
+
+/* controls */
+.btn{min-height:46px;padding:10px 18px;border-radius:12px;border:1.5px solid var(--edge);background:var(--card);font-weight:800;box-shadow:var(--press);transition:transform .08s,box-shadow .08s,background .15s}
+.btn:hover{background:var(--soft)}
+.btn:active{transform:translate(3px,3px);box-shadow:none}
+.btn.primary{background:var(--sun)}
+.btn.primary:hover{background:#ffbd0f}
+.btn.dark{background:var(--edge);color:#fff}
+.btn.sm{min-height:40px;padding:6px 14px;font-size:.9rem}
+.btn:disabled{opacity:.35;cursor:default;transform:none;box-shadow:none}
+.btn.sel{background:var(--edge);color:#fff}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.opt{width:100%;text-align:left;min-height:52px;padding:12px 14px;border-radius:12px;border:1.5px solid var(--edge);background:var(--card);display:flex;gap:12px;align-items:flex-start;font-weight:700;box-shadow:var(--press);transition:transform .08s,box-shadow .08s}
+.opt:active:not([disabled]){transform:translate(3px,3px);box-shadow:none}
+.opt:hover:not([disabled]){background:var(--soft)}
+.opt .L{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--soft);border:1px solid var(--line);font-weight:800;font-size:.85rem}
+.opt.ok{background:var(--ok-bg);border-color:var(--ok)} .opt.ok .L{background:var(--ok);color:#fff;border-color:var(--ok)}
+.opt.no{background:var(--bad-bg);border-color:var(--bad);animation:shake .3s} .opt.no .L{background:var(--bad);color:#fff;border-color:var(--bad)}
+.opt[disabled]{cursor:default;box-shadow:none}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.fb{border-radius:12px;padding:12px 14px;font-size:.95rem;display:none;border-left:5px solid}
+.fb.show{display:block;animation:in .25s ease both}
+.fb.ok{background:var(--ok-bg);border-color:var(--ok)} .fb.no{background:var(--bad-bg);border-color:var(--bad)} .fb.info{background:var(--soft);border-color:var(--pc)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{min-height:42px;padding:6px 16px;border-radius:999px;border:1.5px solid var(--edge);background:var(--card);font-weight:800;font-size:.9rem;box-shadow:2px 2px 0 var(--edge)}
+.tab[aria-selected="true"]{background:var(--edge);color:#fff;box-shadow:none;transform:translate(2px,2px)}
+.reveal{display:none}
+.reveal.show{display:block;animation:in .25s ease both}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:.94rem}
+.tbl th,.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.tbl tr:last-child td{border-bottom:0}
+.tbl th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media (max-width:600px){
+  .tbl.tstack thead{display:none}
+  .tbl.tstack tr{display:grid;gap:2px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .tbl.tstack tr:last-child{border-bottom:0}
+  .tbl.tstack td{border:0;padding:0 4px}
+  .tbl.tstack td[data-l]::before{content:attr(data-l);display:block;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+}
+
+/* flip cards */
+.flip{perspective:900px;min-height:170px;border:0;background:none;padding:0;text-align:left}
+.flip .in{position:relative;width:100%;height:100%;min-height:170px;transition:transform .5s ease;transform-style:preserve-3d}
+.flip.on .in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:14px;padding:14px 16px;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;gap:6px;border:1.5px solid var(--edge);box-shadow:var(--press);background:var(--card)}
+.face.b{background:var(--ok-bg);border-color:var(--ok);box-shadow:3px 3px 0 var(--ok);transform:rotateY(180deg)}
+.face .ph{font-weight:800;font-size:1.05rem;line-height:1.35}
+.face .more{margin-top:auto;font-size:.8rem;font-weight:800;color:var(--pc)}
+.tag{font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.tag.bad{color:var(--bad)} .tag.good{color:var(--ok)}
+.strike{text-decoration:line-through;text-decoration-color:var(--bad);text-decoration-thickness:2px;color:var(--muted)}
+
+/* verb flash */
+.vf{border:1.5px solid var(--edge);border-radius:14px;background:var(--card);box-shadow:var(--press);padding:12px 14px;text-align:left;display:flex;flex-direction:column;gap:4px;min-height:96px}
+.vf:active{transform:translate(3px,3px);box-shadow:none}
+.vf .v{font-family:var(--display);font-weight:800;font-size:1.4rem}
+.vf .s{font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* inputs */
+.fill{display:inline-block;min-width:8.5em;max-width:100%;padding:4px 10px;border-radius:9px;border:1.5px solid var(--edge);background:#fff;font-weight:700}
+.fill.ok{border-color:var(--ok);background:var(--ok-bg)} .fill.no{border-color:var(--bad);background:var(--bad-bg)}
+.line-in{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--edge);background:#fff;font-weight:600}
+textarea.line-in{min-height:60px;resize:vertical}
+.item{display:flex;flex-direction:column;gap:8px}
+.item .q{line-height:2.1}
+.num{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--edge);color:#fff;font-size:.78rem;font-weight:800;margin-right:6px;vertical-align:middle}
+.small{font-size:.86rem}
+.check{display:flex;gap:8px;align-items:center;font-weight:700;font-size:.9rem;min-height:40px}
+.check input{width:22px;height:22px;accent-color:var(--edge)}
+
+/* cover */
+.cover{min-height:100%;display:flex;align-items:center}
+.cover .wrap{gap:22px}
+.hl{background:linear-gradient(transparent 60%,var(--sun) 60%);padding:0 .05em}
+
+/* finder */
+.step{display:flex;flex-direction:column;gap:12px}
+.qbig{font-family:var(--display);font-weight:700;font-size:clamp(1.15rem,2.8vw,1.45rem);line-height:1.3}
+.trail{display:flex;flex-wrap:wrap;gap:6px}
+.trail span{font-size:.75rem;font-weight:800;padding:2px 8px;border-radius:999px;background:var(--soft);border:1px solid var(--line);color:var(--muted)}
+
+/* quiz */
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pips{display:flex;gap:5px;flex-wrap:wrap}
+.pip{width:24px;height:8px;border-radius:4px;background:var(--line)}
+.pip.cur{background:var(--edge)} .pip.ok{background:var(--ok)} .pip.no{background:var(--bad)}
+.score{font-family:var(--display);font-weight:800;font-size:clamp(3.6rem,13vw,6rem);line-height:1}
+.opts{display:flex;flex-direction:column;gap:12px}
+.blank{display:inline-block;min-width:4.5em;border-bottom:2.5px solid var(--edge);text-align:center;color:var(--pc);font-weight:800}
+
+/* nav */
+.nav{display:flex;align-items:center;gap:10px;padding:10px calc(14px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));background:var(--card);border-top:1px solid var(--line)}
+.nav .btn{min-width:54px}
+.navmid{flex:1;text-align:center;font-size:.85rem;font-weight:800;color:var(--muted)}
+.navlbl{display:none}
+@media (max-width:620px){.nav .navlbl{display:inline}}
+
+.modal{position:fixed;inset:0;background:rgba(20,33,61,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+.modal.show{display:flex}
+.modal .card{max-width:420px;display:flex;flex-direction:column;gap:12px}
+a.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;color:var(--text)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
+
+/* ---------- v2 components ---------- */
+.exline{font-weight:600;line-height:1.7}
+.t{white-space:nowrap}
+.fx{display:inline-flex;align-items:center;gap:.28em;white-space:nowrap;flex-wrap:nowrap}
+.stk{display:inline-flex;flex-direction:column;align-items:center;line-height:1.02;font-size:.62em;font-weight:800;padding:0 .1em}
+.stk span:first-child{border-bottom:2px solid currentColor;padding-bottom:2px;margin-bottom:2px}
+.lab{display:block;font-size:.7rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tlfig{margin:0 auto;max-width:540px;width:100%}
+.tl{width:100%;height:auto;display:block}
+.tl text{font-family:var(--body);font-weight:800}
+.tlkey{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin-top:6px;font-size:.84rem;color:var(--muted)}
+.tlkey>span{display:inline-flex;align-items:center;gap:6px}
+.tlkey b{color:var(--text);white-space:nowrap}
+.k-dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none}
+.k-wave{width:22px;height:10px;flex:none;display:inline-block;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 10'%3E%3Cpath d='M1 5 Q4 0 7 5 T13 5 T19 5' stroke='%235b40cc' stroke-width='2.5' fill='none'/%3E%3C/svg%3E") center/contain no-repeat}
+.k-bolt{width:12px;height:16px;flex:none;display:inline-block;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 16'%3E%3Cpath d='M8 0 2 9h4l-2 7 7-10H7l3-6z' fill='%230a7d8c'/%3E%3C/svg%3E") center/contain no-repeat}
+.k-pin{width:2px;height:16px;flex:none;display:inline-block;border-left:2px dashed var(--edge)}
+.k-ref{width:10px;height:16px;flex:none;display:inline-block;background:var(--sun);border:1.5px solid var(--edge);border-radius:3px}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center}
+@media (max-width:700px){.split{grid-template-columns:1fr}}
+.exq{border-left:4px solid var(--line);padding:4px 0 4px 12px}
+/* titled cards */
+.ecard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--lift);display:flex;flex-direction:column}
+.ecard .eh{padding:12px 16px;display:flex;flex-direction:column;gap:1px;color:#fff}
+.ecard .eh b{font-family:var(--display);font-weight:800;font-size:1.15rem;line-height:1.2}
+.ecard .eh small{font-size:.82rem;font-weight:700;opacity:.92}
+.ecard .eb{padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.ecard.sp .eh{background:var(--sp)} .ecard.pc .eh{background:var(--pc)} .ecard.pp .eh{background:var(--pp)} .ecard.prp .eh{background:var(--prp)}
+.ecard.ppc .eh{background:linear-gradient(90deg,var(--pc),var(--pp))}
+.ecard.key .eh{background:var(--sun);color:var(--edge)}
+.ecard.ed1 .eh{background:#2f6fb5} .ecard.ed2 .eh{background:#11795a} .ecard.ed3 .eh{background:#7a4bd1}
+.ecard .formula{font-size:clamp(1.1rem,2.4vw,1.35rem)}
+ul.fl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-family:var(--display);font-weight:700}
+ul.fl li{display:flex;gap:10px;align-items:center}
+ul.fl i{font-style:normal;width:26px;height:26px;border-radius:7px;background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;font-size:.85rem;flex:none}
+.mchip.strong{background:var(--prp-bg);border-color:var(--prp-bd);color:var(--prp)}
+.sig{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:6px}
+/* steps */
+.steps{margin:0;padding:0;list-style:none;counter-reset:s;display:flex;flex-direction:column;gap:10px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center}
+.steps li::before{content:counter(s);width:28px;height:28px;border-radius:50%;background:var(--edge);color:#fff;display:grid;place-items:center;font-size:.82rem;font-weight:800}
+/* connector cards */
+.ccard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--lift)}
+.conn{align-self:flex-start;font-family:var(--display);font-weight:800;font-size:1.3rem;padding:2px 12px;border-radius:10px;background:var(--edge);color:#fff}
+.slots{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.slotc{border-radius:12px;padding:8px 10px;border:1.5px solid;display:flex;flex-direction:column;gap:2px}
+.slotc small{font-size:.72rem;font-weight:700;color:var(--muted);line-height:1.25}
+.slotc b{font-family:var(--display);font-size:1.05rem;white-space:nowrap}
+.slotc.sp{background:var(--sp-bg);border-color:var(--sp-bd);color:var(--sp)} .slotc.pp{background:var(--pp-bg);border-color:var(--pp-bd);color:var(--pp)}
+/* drag & drop */
+.bank{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-radius:14px;background:var(--card);border:2px dashed var(--act-bd);min-height:64px;position:sticky;top:-2px;z-index:3}
+.dtag{min-height:42px;padding:6px 12px;font-size:.92rem;border-radius:12px;border:1.5px solid var(--edge);font-weight:800;box-shadow:var(--press);touch-action:none;user-select:none;-webkit-user-select:none}
+.dtag.sp{background:var(--sp-bg);color:var(--sp)} .dtag.pp{background:var(--pp-bg);color:var(--pp)}
+.dtag.sel{outline:3px solid var(--sun);outline-offset:2px;transform:translateY(-2px)}
+.dtag.lift{opacity:.35}
+.ghost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-60%) rotate(-3deg);box-shadow:6px 8px 0 var(--edge)}
+.dzrow{display:flex;flex-direction:column;gap:8px}
+.drop{width:100%;text-align:left;min-height:50px;padding:10px 14px;border-radius:12px;border:2px dashed var(--muted);background:var(--soft);font-weight:600;line-height:1.6}
+.drop .dz-slot{display:inline-block;min-width:4em;text-align:center;border-bottom:2.5px solid var(--edge);color:var(--muted)}
+.drop.hover{border-color:var(--pc);background:var(--pc-bg)}
+.drop.ok{border-style:solid;cursor:default;color:var(--text)}
+.drop.ok.sp{border-color:var(--sp-bd);background:#f3fbfc} .drop.ok.pp{border-color:var(--pp-bd);background:#fff6f9}
+.drop.shake{animation:shake .3s;border-color:var(--bad)}
+/* lanjutan map + marker cards */
+.pmap{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pm{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-weight:700;font-size:.85rem;text-align:left;color:var(--muted)}
+.pm b{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--soft);flex:none;color:var(--text)}
+.pm.on{border-color:var(--pp);background:var(--pp-bg);color:var(--pp)} .pm.on b{background:var(--pp);color:#fff}
+@media (max-width:640px){.pmap{grid-template-columns:1fr 1fr}}
+.mcard{display:grid;grid-template-columns:120px 1fr;background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--lift)}
+.mcard .mw{background:var(--pp-bg);border-right:1px solid var(--pp-bd);padding:12px;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.mcard .mw span{font-family:var(--display);font-weight:800;font-size:1.2rem;color:var(--pp);line-height:1.15}
+.mcard .mw small{font-size:.78rem;font-weight:700;color:var(--muted)}
+.mcard .mx{padding:12px 14px}
+@media (max-width:440px){.mcard{grid-template-columns:1fr}.mcard .mw{border-right:0;border-bottom:1px solid var(--pp-bd);flex-direction:row;align-items:baseline;gap:8px}}
+.shiftrow{display:flex;flex-wrap:wrap;gap:10px}
+.shift{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.shift .arr{font-weight:800;color:var(--muted)}
+/* irregular verbs */
+.vhead,.vrow{display:grid;grid-template-columns:1fr 1fr 1.2fr 1.6fr;gap:10px;padding:9px 14px;align-items:baseline}
+.vhead{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-bottom:0}
+.vlist{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.vrow{border-bottom:1px solid var(--line)} .vrow:last-child{border-bottom:0} .vrow:nth-child(even){background:#fafcfe}
+.vrow .v2{color:var(--sp);font-weight:800} .vrow .v3{color:var(--pp);font-weight:800}
+@media (max-width:560px){.vhead{display:none}.vrow{grid-template-columns:1fr 1fr 1fr;row-gap:0}.vrow .muted{grid-column:1/-1;font-size:.85rem}}
+.pager{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pgb{min-width:40px;height:40px;border-radius:10px;border:1.5px solid var(--edge);background:var(--card);font-weight:800;box-shadow:2px 2px 0 var(--edge)}
+.pgdots{padding:0 2px;font-weight:800;color:var(--muted)}
+.pgb.on{background:var(--edge);color:#fff;box-shadow:none}
+.pgb:disabled{opacity:.3;box-shadow:none;cursor:default}
+/* tense finder */
+.howto{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.howto li{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.9rem;padding:6px 12px 6px 6px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.howto b{width:24px;height:24px;border-radius:50%;background:var(--sun);border:1.5px solid var(--edge);display:grid;place-items:center;font-size:.8rem}
+.specimen{background:var(--edge);color:#fff;border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 24px rgba(20,33,61,.18)}
+.sp-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.sp-lab{display:inline-flex;align-items:center;gap:8px;font-size:.74rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--sun)}
+.sp-lab svg{width:18px;height:18px}
+.sp-sent{font-family:var(--display);font-weight:700;font-size:clamp(1.2rem,3vw,1.6rem);line-height:1.45;max-width:none}
+.sp-sent .blank{color:var(--sun);border-color:var(--sun)}
+.btn.ghostw{background:transparent;color:#fff;border-color:#fff;box-shadow:none}
+.btn.ghostw:hover{background:rgba(255,255,255,.12)}
+.finder{background:var(--card);border:1.5px solid var(--line);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.stepper{display:flex;flex-wrap:wrap;gap:4px 6px}
+.sd{width:clamp(26px,7.4vw,32px);height:clamp(26px,7.4vw,32px);border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:800;background:var(--soft);border:1.5px solid var(--line);color:var(--muted)}
+.sd.no{background:var(--line);color:var(--muted)}
+.sd.cur{background:var(--sun);border-color:var(--edge);color:var(--edge)}
+.sd.yes{background:var(--ok);border-color:var(--ok);color:#fff}
+.result{padding:12px 14px;border-radius:14px;background:var(--soft)}
+
+
+.audiobar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.audiobar.off{background:var(--bad-bg);border-color:var(--bad)}
+.ab-ic{width:30px;height:30px;border-radius:50%;background:var(--sun);border:1.5px solid var(--edge);display:grid;place-items:center;flex:none}
+.ab-ic svg{width:16px;height:16px}
+.wgrid{display:flex;flex-direction:column;gap:8px}
+.wbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 12px;border-radius:12px;border:1.5px solid var(--edge);background:var(--card);box-shadow:var(--press);transition:transform .08s,box-shadow .08s}
+.wbtn:active{transform:translate(3px,3px);box-shadow:none}
+.wbtn svg{width:22px;height:22px;flex:none;color:var(--pc)}
+.wbtn span{display:flex;flex-direction:column;line-height:1.2}
+.wbtn b{font-size:1.02rem}
+.wbtn small{font-size:.85rem;color:var(--muted);font-weight:600}
+.spk.ic{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--edge);background:var(--pc-bg);color:var(--pc);display:grid;place-items:center;flex:none;box-shadow:2px 2px 0 var(--edge)}
+.spk.ic svg{width:20px;height:20px}
+.spk.ic:active{transform:translate(2px,2px);box-shadow:none}
+.spk.playing{background:var(--sun)!important;animation:pulse .8s ease-in-out infinite}
+.spk:disabled{opacity:.4;cursor:default}
+@keyframes pulse{50%{transform:scale(1.04)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#14213d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 4 12l7 7M20 5l-7 7 7 7"/></svg></span>Rewind</div>
+  <span class="count" id="count">1 / 1</span>
+  <a class="iconbtn" id="newtab" href="#" target="_blank" rel="noopener" style="display:none" aria-label="Buka di tab baru"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="lbl">Tab baru</span></a>
+  <button class="iconbtn" id="fsBtn" aria-label="Layar penuh"><svg id="fsIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="lbl" id="fsLbl">Layar penuh</span></button>
+</header>
+<nav class="rail" id="rail" aria-label="Bab"><div class="bar" id="bar"></div></nav>
+<main id="stage"></main>
+<nav class="nav" aria-label="Navigasi slide">
+  <button class="btn" id="prev" aria-label="Slide sebelumnya">‹ <span class="navlbl">Kembali</span></button>
+  <span class="navmid" id="navmid"></span>
+  <button class="btn primary" id="next" aria-label="Slide berikutnya"><span class="navlbl">Lanjut</span> ›</button>
+</nav>
+<div class="modal" id="fsModal" role="dialog" aria-modal="true" aria-labelledby="fsTitle">
+  <div class="card">
+    <h3 id="fsTitle">Layar penuh tidak tersedia di sini</h3>
+    <p class="muted">Perangkat atau halaman sematan (misalnya Google Sites di iPhone) tidak mengizinkan mode layar penuh. Buka slide di tab baru agar tampil memenuhi layar.</p>
+    <div class="row"><a class="btn primary" id="fsOpen" href="#" target="_blank" rel="noopener">Buka di tab baru</a><button class="btn" id="fsClose">Tutup</button></div>
+  </div>
+</div>
+<canvas id="confetti"></canvas>
+<script>
+/* ============ helpers ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const T=(x,c)=>`<span class="t ${c}">${x}</span>`;
+const M=x=>`<span class="mk">${x}</span>`;
+const COL={sp:'var(--sp)',pc:'var(--pc)',pp:'var(--pp)',prp:'var(--prp)'};
+const NAME={sp:'Simple Past',pc:'Past Continuous',pp:'Past Perfect',prp:'Present Perfect'};
+const H=(e,c,t,l)=>`<header class="sh"><span class="eyebrow">${c?`<span class="dotc" style="background:${COL[c]}"></span>`:''}${e}</span><h2>${t}</h2>${l?`<p class="lead">${l}</p>`:''}</header>`;
+const ACT=(ins,body)=>`<section class="activity"><div class="act-head"><span class="act-tag">Coba</span><p>${ins}</p></div><div class="act-body">${body}</div></section>`;
+const norm=s=>s.toLowerCase().replace(/[’`]/g,"'").replace(/[.,!?"]/g,'').replace(/\s+/g,' ').trim();
+function confetti(n=120){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const c=$('#confetti'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+  const col=['#0a7d8c','#5b40cc','#b8285f','#ffc935','#14213d'];const P=Array.from({length:n},()=>({x:innerWidth/2+(Math.random()-.5)*140,y:innerHeight*.45,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,s:6+Math.random()*7,r:Math.random()*6,vr:(Math.random()-.5)*.4,c:col[Math.random()*5|0]}));
+  let t=0;(function f(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.45;p.x+=p.vx;p.y+=p.vy;p.vx*=.99;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.66);x.restore()});if(++t<150)requestAnimationFrame(f);else x.clearRect(0,0,c.width,c.height)})()}
+
+/* timeline: left = past, right = now. SVG holds marks + short labels; the legend underneath explains them. */
+const AX=`<line x1="14" y1="58" x2="374" y2="58" stroke="#14213d" stroke-width="2.5"/><path d="M374 52 l10 6 -10 6z" fill="#14213d"/><text x="14" y="92" font-size="14" fill="#56627a">← lampau</text><text x="386" y="92" font-size="14" fill="#14213d" text-anchor="end">sekarang</text>`;
+const wave=(x1,x2,y,amp=6,ph=0)=>{let d=`M${x1} ${y}`;for(let x=x1;x<=x2;x+=3)d+=` L${x} ${(y+Math.sin((x-x1)/8+ph)*amp).toFixed(1)}`;return d};
+const KEY={
+  dotsp:'<i class="k-dot" style="background:var(--sp)"></i>',dotpp:'<i class="k-dot" style="background:var(--pp)"></i>',dotprp:'<i class="k-dot" style="background:var(--prp)"></i>',
+  wave:'<i class="k-wave"></i>',bolt:'<i class="k-bolt"></i>',pin:'<i class="k-pin"></i>',ref:'<i class="k-ref"></i>'};
+const legend=items=>`<figcaption class="tlkey">${items.map(([k,t,f])=>`<span>${KEY[k]}<span>${t}${f?` <b>${f}</b>`:''}</span></span>`).join('')}</figcaption>`;
+function TL(kind,o={}){
+  let g='',L=[];
+  if(kind==='sp'){g=`<circle cx="200" cy="58" r="10" fill="#0a7d8c"/><text x="200" y="34" font-size="15" fill="#0a7d8c" text-anchor="middle">${o.a||'Verb 2'}</text>`;L=[['dotsp','kejadian selesai, waktunya jelas','Verb 2']]}
+  if(kind==='pc'){g=`<path d="${wave(60,226,58)}" stroke="#5b40cc" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="${wave(229,320,58,6,(229-60)/8)}" stroke="#5b40cc" stroke-width="4.5" fill="none" stroke-linecap="round" opacity=".28"/><path d="M236 18 l-12 24 h11 l-9 26 25-34 h-11 l9-16z" fill="#0a7d8c"/><text x="60" y="30" font-size="15" fill="#5b40cc">${o.a||'was/were + V‑ing'}</text><text x="258" y="30" font-size="15" fill="#0a7d8c">${o.c||'Verb 2'}</text>`;L=[['wave','kegiatan yang sedang berlangsung','was/were + V‑ing'],['bolt','kejadian mendadak yang memotong','Verb 2']]}
+  if(kind==='pcpt'){g=`<path d="${wave(60,320,58)}" stroke="#5b40cc" stroke-width="4.5" fill="none" stroke-linecap="round"/><line x1="220" y1="22" x2="220" y2="74" stroke="#14213d" stroke-width="2" stroke-dasharray="4 3"/><text x="60" y="30" font-size="15" fill="#5b40cc">was/were + V‑ing</text><text x="228" y="30" font-size="15" fill="#14213d">${o.p||'9 p.m.'}</text>`;L=[['wave','kegiatan sudah dimulai dan belum selesai','was/were + V‑ing'],['pin','titik waktu spesifik di masa lalu','']]}
+  if(kind==='pc2'){g=`<path d="${wave(60,320,46,5)}" stroke="#5b40cc" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="${wave(60,320,70,5,2)}" stroke="#8f7ae6" stroke-width="4.5" fill="none" stroke-linecap="round"/><line x1="14" y1="58" x2="374" y2="58" stroke="#14213d" stroke-width="2.5" opacity=".0"/><text x="60" y="24" font-size="15" fill="#5b40cc">while + was/were + V‑ing</text>`;L=[['wave','dua kegiatan berlangsung bersamaan','was/were + V‑ing']]}
+  if(kind==='pp'){g=`<path d="M144 46 Q207 14 266 46" stroke="#56627a" stroke-width="2" fill="none" stroke-dasharray="4 4"/><path d="M259 39 l9 8 -12 2z" fill="#56627a"/><circle cx="130" cy="58" r="10" fill="#b8285f"/><circle cx="280" cy="58" r="10" fill="#0a7d8c"/><text x="130" y="34" font-size="15" fill="#b8285f" text-anchor="middle">${o.a||'had + V3'}</text><text x="280" y="34" font-size="15" fill="#0a7d8c" text-anchor="middle">${o.c||'Verb 2'}</text><text x="130" y="63" font-size="12" fill="#fff" text-anchor="middle">1</text><text x="280" y="63" font-size="12" fill="#fff" text-anchor="middle">2</text>`;L=[['dotpp',o.b||'① kejadian yang lebih dulu','had + V3'],['dotsp',o.d||'② kejadian yang menyusul','Verb 2']]}
+  if(kind==='seq'){g=`<circle cx="130" cy="58" r="10" fill="#0a7d8c"/><circle cx="280" cy="58" r="10" fill="#0a7d8c"/><text x="130" y="34" font-size="15" fill="#0a7d8c" text-anchor="middle">${o.a}</text><text x="280" y="34" font-size="15" fill="#0a7d8c" text-anchor="middle">${o.c}</text><text x="130" y="63" font-size="12" fill="#fff" text-anchor="middle">1</text><text x="280" y="63" font-size="12" fill="#fff" text-anchor="middle">2</text>`;L=[['dotsp',o.b,'Verb 2'],['dotsp',o.d,'Verb 2']]}
+  if(kind==='ppc'){g=`<path d="${wave(60,262,58)}" stroke="#b8285f" stroke-width="4.5" fill="none" stroke-linecap="round"/><circle cx="280" cy="58" r="10" fill="#0a7d8c"/><text x="60" y="30" font-size="15" fill="#b8285f">had been + V‑ing</text><text x="280" y="30" font-size="15" fill="#0a7d8c" text-anchor="middle">Verb 2</text>`;L=[['wave','kegiatan berlangsung selama suatu durasi','had been + V‑ing'],['dotsp','kejadian lampau lain','Verb 2']]}
+  if(kind==='prpref'){g=`<circle cx="160" cy="58" r="10" fill="#b45f06"/><path d="M172 58 H360" stroke="#b45f06" stroke-width="3" stroke-dasharray="6 5"/><rect x="364" y="40" width="20" height="36" rx="5" fill="#ffc935" stroke="#14213d" stroke-width="2"/><text x="160" y="34" font-size="15" fill="#b45f06" text-anchor="middle">have/has + V3</text>`;L=[['dotprp','kejadian / hasil',''],['ref','titik acuan: sekarang','']]}
+  if(kind==='ppref'){g=`<circle cx="110" cy="58" r="10" fill="#b8285f"/><path d="M122 58 H222" stroke="#b8285f" stroke-width="3" stroke-dasharray="6 5"/><rect x="226" y="40" width="20" height="36" rx="5" fill="#ffc935" stroke="#14213d" stroke-width="2"/><text x="110" y="34" font-size="15" fill="#b8285f" text-anchor="middle">had + V3</text><text x="236" y="30" font-size="15" fill="#14213d" text-anchor="middle">8 p.m. last night</text>`;L=[['dotpp','kejadian / hasil',''],['ref','titik acuan: satu waktu di masa lalu','']]}
+  if(o.legend===false)L=[];
+  return `<figure class="tlfig"><svg class="tl" viewBox="0 0 400 100" role="img" aria-label="Garis waktu">${AX}${g}</svg>${L.length?legend(L):''}</figure>`;
+}
+/* stacked was/were formula */
+const WW='<span class="stk"><span>was</span><span>were</span></span>';
+const FX=x=>`<span class="fx">${x}</span>`;
+const MAP=i=>`<nav class="pmap" aria-label="Pola lanjutan">${[['a','Kata penanda','lj-a'],['b','When','lj-b'],['c','Reported speech','lj-c'],['d','Conditional tipe 3','lj-d']].map(([l,t,id],k)=>`<button class="pm${k===i?' on':''}" data-gid="${id}"><b>${l}</b><span>${t}</span></button>`).join('')}</nav>`;
+
+const slides=[];
+const add=(ch,o)=>{o.ch=ch;slides.push(o)};
+const SCORE={A:null,B:0,C:0,D:0,E:0,F:0};
+
+/* ============ 0 · MULAI ============ */
+add('Mulai',{html:`<div class="cover"><div class="wrap">
+  <h1>Rewind:<br><span class="hl">Past Tenses</span></h1>
+  <p class="lead" style="font-size:clamp(1.05rem,2.4vw,1.3rem);color:var(--text)">Tiga cara bercerita tentang masa lalu. Kuncinya ada pada <b>kata penanda</b> di dalam kalimat.</p>
+  ${ACT('Ketuk tiap tense untuk melihat bentuknya di garis waktu.',`
+    <div class="tabs" id="cvTabs">
+      <button class="tab" aria-selected="true" data-k="sp">Simple Past</button>
+      <button class="tab" aria-selected="false" data-k="pc">Past Continuous</button>
+      <button class="tab" aria-selected="false" data-k="pp">Past Perfect</button>
+    </div>
+    <div class="card" id="cvOut"></div>`)}
+  <div class="row"><button class="btn primary" data-go="1">Ayo mulai ›</button><button class="btn" data-goch="Kuis">Langsung ke kuis</button></div>
+</div></div>`,init(el){
+  const D={sp:['I '+T('visited','sp')+' my grandmother '+M('last week')+'.'],pc:['I '+T('was taking','pc')+' a shower '+M('when')+' the lights '+T('went out','sp')+'.'],pp:[M('By the time')+' we '+T('arrived','sp')+', the film '+T('had started','pp')+'.']};
+  const show=k=>{$$('.tab',el).forEach(t=>t.setAttribute('aria-selected',t.dataset.k===k));$('#cvOut',el).innerHTML=`${TL(k)}<p class="exline">${D[k][0]}</p>`};
+  $$('.tab',el).forEach(t=>t.onclick=()=>show(t.dataset.k));show('sp');
+}});
+
+add('Mulai',{html:`<div class="wrap">
+  ${H('Pemantik','','Tiga cerita kecil, tiga cara melihat waktu','Baca cerita dalam bahasa Indonesia, jawab pertanyaannya, lalu lihat kalimat bahasa Inggrisnya.')}
+  ${ACT('Jawab ketiga pertanyaan di bawah.','<div class="stackv" id="scenes"></div>')}
+</div>`,init(el){
+  const S=[
+    ['Kemarin, mereka menonton pertandingan sepak bola.','Kejadian itu…',['sudah selesai pada waktu lampau yang jelas','masih berlangsung sampai sekarang'],0,'They '+T('watched','sp')+' a football match '+M('yesterday')+'.','sp'],
+    ['Saya sedang mandi, lalu lampu tiba-tiba padam.','Kegiatan mana yang sedang berlangsung?',['mandi','lampu padam'],0,'I '+T('was taking','pc')+' a shower '+M('when')+' the lights suddenly '+T('went out','sp')+'.','pc'],
+    ['Ketika kami tiba di bioskop, film sudah mulai.','Mana yang terjadi lebih dulu?',['kami tiba','film mulai'],1,M('By the time')+' we '+T('arrived','sp')+' at the cinema, the film '+T('had started','pp')+'.','pp']];
+  const box=$('#scenes',el);
+  S.forEach(([st,q,opts,ans,en,k],n)=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<p><span class="num">${n+1}</span><b>${st}</b></p><p class="muted small" style="margin:8px 0">${q}</p><div class="row">${opts.map((o,i)=>`<button class="btn sm" data-i="${i}">${o}</button>`).join('')}</div><div class="fb" style="margin-top:10px"></div>`;
+    const fb=$('.fb',c);$$('[data-i]',c).forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===ans;fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=ok?`<b>Tepat.</b> Dalam bahasa Inggris: ${en} <span class="pill ${k}" style="margin-left:4px">${NAME[k]}</span>`:'Belum tepat. Baca lagi ceritanya, lalu coba pilihan lain.'});box.appendChild(c)});
+}});
+
+add('Mulai',{html:`<div class="wrap">
+  ${H('Tujuan dan Peta Konsep','','Pilih tense dengan membaca kata penanda','Setelah pelajaran ini kamu mampu memilih <b>Simple Past</b>, <b>Past Continuous</b>, atau <b>Past Perfect</b> dari kata penanda di dalam kalimat.')}
+  <div class="grid3">
+    ${[['sp','S + Verb 2',['yesterday','last week / month / year / semester','… ago'],'Kejadian selesai pada waktu lampau yang jelas.'],['pc','S + '+WW+' + V‑ing',['while','when','at this time last week','at 8 p.m. last night'],'Kegiatan yang sedang berlangsung pada satu saat di masa lalu.'],['pp','S + had + Verb 3',['by the time','before','after'],'Kejadian yang selesai lebih dulu daripada kejadian lampau lain.']].map(([k,f,mk,m])=>`<div class="ecard ${k}"><div class="eh"><b>${NAME[k]}</b></div><div class="eb"><p class="formula">${FX(f)}</p><div><span class="lab">Penanda</span><div class="chips">${mk.map(x=>`<span class="mchip">${x}</span>`).join('')}</div></div><div><span class="lab">Makna</span><p class="small">${m}</p></div></div></div>`).join('')}
+  </div>
+  <p class="foot">Inti materi: bagian 1–3. Bagian 4–6 adalah pola lanjutan Past Perfect, perbandingan dengan Present Perfect, dan pengayaan.</p>
+</div>`});
+
+/* ============ 1 · SIMPLE PAST ============ */
+add('Simple Past',{html:`<div class="wrap">
+  ${H('Bagian 1 · Simple Past','sp','Kejadian selesai di waktu lampau yang jelas','Dipakai bila ada penanda waktu lampau yang berdiri sendiri, misalnya <i>yesterday</i>, <i>last week</i>, atau <i>two days ago</i>.')}
+  <div class="grid2">
+    <div class="card">${TL('sp')}</div>
+    <div class="card"><span class="lab">Penanda waktu (Ekspresi 1)</span><div class="chips">${['last week','last month','last year','last semester','yesterday','two days ago','a month ago'].map(x=>`<span class="mchip">${x}</span>`).join('')}</div></div>
+  </div>
+  ${ACT('Pilih jenis kalimat untuk melihat rumusnya.',`<div class="tabs" id="spTabs"></div><div class="card" id="spOut"></div>`)}
+</div>`,init(el){
+  const F=[['Positif','S + Verb 2','I '+T('visited','sp')+' my grandmother last week.'],['Negatif','S + did not + Verb 1','I '+T('did not visit','sp')+' my grandmother last week.'],['Tanya','Did + S + Verb 1?',T('Did','sp')+' you '+T('visit','sp')+' your grandmother last week?']];
+  const tabs=$('#spTabs',el),out=$('#spOut',el);
+  const show=k=>{$$('.tab',tabs).forEach((t,j)=>t.setAttribute('aria-selected',j===k));out.innerHTML=`<p class="formula" style="color:var(--sp)">${FX(F[k][1])}</p><p class="exline">${F[k][2]}</p>`};
+  F.forEach((f,k)=>{const b=document.createElement('button');b.className='tab';b.textContent=f[0];b.onclick=()=>show(k);tabs.appendChild(b)});show(0);
+}});
+
+add('Simple Past',{html:`<div class="wrap">
+  ${H('Bagian 1 · Simple Past','sp','Contoh dan dua aturan yang sering terlewat')}
+  ${ACT('Ketuk kalimat untuk melihat artinya.',`<div class="stackv" id="spEx"></div>`)}
+  <div class="grid2">
+    <div class="note warn"><b>Setelah did / did not → Verb 1</b><p>Benar: She did not <b>go</b>.<br><span class="strike">She did not went.</span></p></div>
+    <div class="note warn"><b>Penanda lampau tunggal ≠ Present Perfect</b><p>Benar: I <b>visited</b> her yesterday.<br><span class="strike">I have visited her yesterday.</span></p></div>
+  </div>
+</div>`,init(el){
+  const E=[['They '+T('watched','sp')+' a football match '+M('yesterday')+'.','Mereka menonton pertandingan sepak bola kemarin.'],['We '+T('went','sp')+' to Yogyakarta '+M('a month ago')+'.','Kami pergi ke Yogyakarta sebulan lalu.'],['My uncle '+T('opened','sp')+' a small shop '+M('last year')+'.','Paman saya membuka toko kecil tahun lalu.'],['Our teacher '+T('gave','sp')+' us a quiz '+M('last semester')+'.','Guru kami memberi kami kuis semester lalu.']];
+  const box=$('#spEx',el);E.forEach(([en,id])=>{const b=document.createElement('button');b.className='opt';b.style.flexDirection='column';b.style.gap='2px';b.innerHTML=`<span>${en}</span><span class="reveal muted small" style="font-weight:600">${id}</span>`;b.onclick=()=>$('.reveal',b).classList.toggle('show');box.appendChild(b)});
+}});
+
+add('Simple Past',{html:`<div class="wrap">
+  ${H('Bagian 1 · Kata Kerja','sp','Verb 1 → Verb 2 → Verb 3','Kata kerja beraturan cukup ditambah <b>-ed</b> (atau -d): visit, visited, visited. Kata kerja tak beraturan harus dihafal.')}
+  ${ACT('Ketuk kartu untuk berganti bentuk: Verb 1, Verb 2, Verb 3.',`<div class="grid3" id="vfl"></div>`)}
+  <p class="foot">Daftar lengkap kata kerja tak beraturan ada di bab Pengayaan.</p>
+</div>`,init(el){
+  const V=[['go','went','gone','pergi'],['buy','bought','bought','membeli'],['hold','held','held','menyelenggarakan'],['leave','left','left','meninggalkan, pergi'],['give','gave','given','memberi'],['get','got','got (gotten di AS)','mendapat, tiba']];
+  const box=$('#vfl',el);V.forEach(v=>{let s=0;const b=document.createElement('button');b.className='vf';const r=()=>{b.innerHTML=`<span class="s">Verb ${s+1} · ${v[3]}</span><span class="v" style="color:${['var(--text)','var(--sp)','var(--pp)'][s]}">${v[s]}</span><span class="muted small">${['ketuk untuk Verb 2','ketuk untuk Verb 3','ketuk untuk kembali'][s]}</span>`};b.onclick=()=>{s=(s+1)%3;r()};r();box.appendChild(b)});
+}});
+
+/* ============ 2 · PAST CONTINUOUS ============ */
+add('Past Continuous',{html:`<div class="wrap">
+  ${H('Bagian 2 · Past Continuous','pc','Kegiatan yang sedang berlangsung di masa lalu','Kegiatan sudah dimulai dan belum selesai pada satu saat di masa lalu.')}
+  <div class="grid3">
+    ${[['Positif','S + '+WW+' + V‑ing','I '+T('was cooking','pc')+'.'],['Negatif','S + '+WW+' + not + V‑ing','I '+T('was not cooking','pc')+'.'],['Tanya',WW.replace('was','Was').replace('were','Were')+' + S + V‑ing?',T('Were','pc')+' you '+T('cooking','pc')+'?']].map(([n,f,e])=>`<div class="card stackv"><span class="lab">${n}</span><p class="formula" style="color:var(--pc)">${FX(f)}</p><p class="exline">${e}</p></div>`).join('')}
+  </div>
+  <div class="grid2"><div class="note"><b>was</b><p>I, he, she, it, dan subjek tunggal</p></div><div class="note"><b>were</b><p>you, we, they, dan subjek jamak</p></div></div>
+  ${ACT('Pilih was atau were untuk setiap subjek.',`<div class="grid2" id="ww"></div><p class="muted small" id="wwScore"></p>`)}
+</div>`,init(el){
+  const W=[['I','was'],['They','were'],['My parents','were'],['She','was'],['We','were'],['Rina','was'],['You','were'],['The students','were']];
+  const box=$('#ww',el);let got=0;
+  W.forEach(([s,a])=>{const c=document.createElement('div');c.className='card';c.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px';c.innerHTML=`<b>${s} … cooking</b><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm">was</button><button class="btn sm">were</button></span>`;
+    let done=false;$$('button',c).forEach(b=>b.onclick=()=>{if(done)return;const ok=b.textContent===a;b.style.background=ok?'var(--ok-bg)':'var(--bad-bg)';b.style.borderColor=ok?'var(--ok)':'var(--bad)';if(ok){done=true;got++;$('#wwScore',el).textContent=`${got} / ${W.length} benar`;if(got===W.length)confetti(60)}});box.appendChild(c)});
+}});
+
+add('Past Continuous',{html:`<div class="wrap">
+  ${H('Bagian 2 · Tiga Pola','pc','Kapan Past Continuous dipakai?','Ada tiga pola. Pilih pola untuk melihat aturan, garis waktu, dan contohnya.')}
+  ${ACT('Pilih pola.',`<div class="tabs" id="pcTabs"></div><div class="card stackv" id="pcOut"></div>`)}
+</div>`,init(el){
+  const P=[
+   ['Pola 1 · when',['Rumus: <b>Past Continuous + when + Simple Past</b>.','Klausa dengan <i>when</i> berisi kejadian mendadak (Verb 2).','Klausa satunya adalah kegiatan yang sedang berlangsung.','Urutan klausa boleh dibalik; klausa <i>when</i> tetap Verb 2.'],TL('pc'),[['I '+T('was taking','pc')+' a shower '+M('when')+' the lights suddenly '+T('went out','sp')+'.','Saya sedang mandi ketika lampu tiba-tiba padam.'],[M('When')+' I '+T('got','sp')+' home, my mother '+T('was cooking','pc')+' in the kitchen.','Ketika saya tiba di rumah, ibu sedang memasak di dapur.']]],
+   ['Pola 2 · while',['Kata <i>while</i> diikuti <b>was/were + V‑ing</b>.','Klausa satunya boleh kegiatan lain yang bersamaan, atau kejadian mendadak (Verb 2).'],TL('pc2'),[[M('While')+' I '+T('was doing','pc')+' my homework, my brother '+T('was playing','pc')+' games.','Dua kegiatan berlangsung bersamaan.'],[M('While')+' I '+T('was doing','pc')+' my homework, the electricity '+T('went off','sp')+'.','Kegiatan terpotong kejadian mendadak.']]],
+   ['Pola 3 · titik waktu',['Penanda titik waktu spesifik di masa lalu (Ekspresi 2).','Contoh: <i>at this time last week</i>, <i>at 9 p.m. last night</i>, <i>at 9 a.m. yesterday</i>.'],TL('pcpt'),[[M('At this time last week')+', we '+T('were traveling','pc')+' to Bali.','Pada jam ini minggu lalu, kami sedang dalam perjalanan ke Bali.'],[M('At 9 p.m. last night')+', Rina '+T('was studying','pc')+' in the library.','Pukul 9 malam tadi, Rina sedang belajar di perpustakaan.']]]];
+  const tabs=$('#pcTabs',el),out=$('#pcOut',el);
+  const show=k=>{$$('.tab',tabs).forEach((t,j)=>t.setAttribute('aria-selected',j===k));const [n,rule,tl,ex]=P[k];out.innerHTML=`${tl}<div class="split" style="align-items:start"><div><span class="lab">Aturan</span><ul class="clean">${rule.map(r=>`<li>${r}</li>`).join('')}</ul></div><div><span class="lab">Contoh</span><div class="stackv">${ex.map(([e,i])=>`<div class="exq"><p class="exline">${e}</p><p class="muted small">${i}</p></div>`).join('')}</div></div></div>`};
+  P.forEach((p,k)=>{const b=document.createElement('button');b.className='tab';b.textContent=p[0];b.onclick=()=>show(k);tabs.appendChild(b)});show(0);
+}});
+
+add('Past Continuous',{html:`<div class="wrap">
+  ${H('Bagian 2 · Uji Titik Waktu','pc','Berlangsung atau sesaat?','Penanda titik waktu belum cukup untuk memilih tense. Tanyakan: apakah kegiatan itu <b>sudah berlangsung sebelum jam tersebut dan belum selesai</b>?')}
+  <div class="grid2">
+    <div class="ecard pc"><div class="eh"><b>Ya, sedang berlangsung</b></div><div class="eb"><p>→ Past Continuous</p></div></div>
+    <div class="ecard sp"><div class="eh"><b>Tidak, kejadian sesaat tepat pada jam itu</b></div><div class="eb"><p>arrive, leave, start → Simple Past</p></div></div>
+  </div>
+  ${ACT('Tentukan jenis kegiatan pada setiap kalimat.','<div class="stackv" id="ptest"></div>')}
+</div>`,init(el){
+  const D=[['At 9 p.m. last night, Rina '+T('was studying','pc')+' in the library.','pc','Belajar sudah dimulai sebelum pukul 9 dan masih berlangsung.'],['Rina '+T('arrived','sp')+' at the library at 9 p.m. last night.','sp','Tiba adalah kejadian sesaat tepat pukul 9.']];
+  const box=$('#ptest',el);D.forEach(([s,k,why])=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<p class="exline">${s}</p><div class="row" style="margin-top:10px"><button class="btn sm" data-k="pc">Sedang berlangsung</button><button class="btn sm" data-k="sp">Kejadian sesaat</button></div><div class="fb" style="margin-top:10px"></div>`;
+    const fb=$('.fb',c);$$('[data-k]',c).forEach(b=>b.onclick=()=>{const ok=b.dataset.k===k;fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'<b>Tepat.</b> ':'<b>Belum tepat.</b> ')+why+` → <span class="pill ${k}">${NAME[k]}</span>`});box.appendChild(c)});
+}});
+
+/* ============ 3 · PAST PERFECT ============ */
+add('Past Perfect',{html:`<div class="wrap">
+  ${H('Bagian 3 · Past Perfect','pp','Kejadian yang selesai lebih dulu','Satu kalimat memuat <b>dua kejadian lampau</b>. Yang lebih dulu memakai <b>had + Verb 3</b>, yang menyusul memakai <b>Verb 2</b>.')}
+  <div class="card">${TL('pp',{a:'had started',c:'arrived',b:'① film mulai',d:'② kami tiba'})}<p class="exline" style="text-align:center">${M('By the time')} we ${T('arrived','sp')} at the cinema, the film ${T('had started','pp')}.</p></div>
+  <div class="grid3">
+    ${[['Positif','S + had + Verb 3','The bus '+T('had left','pp')+'.'],['Negatif','S + had not + Verb 3','The bus '+T('had not left','pp')+'.'],['Tanya','Had + S + Verb 3?',T('Had','pp')+' the bus '+T('left','pp')+'?']].map(([n,f,e])=>`<div class="card stackv"><span class="lab">${n}</span><p class="formula" style="color:var(--pp)">${FX(f)}</p><p class="exline">${e}</p></div>`).join('')}
+  </div>
+  <p class="foot"><i>Had</i> berlaku untuk semua subjek.</p>
+</div>`});
+
+add('Past Perfect',{html:`<div class="wrap">
+  ${H('Bagian 3 · Kata Penghubung','pp','By the time, before, after','Lihat klausa yang <b>mengikuti</b> kata penghubung. Urutan klausa boleh dibalik, triknya tetap berlaku.')}
+  <div class="grid3">
+    ${[['by the time','sp','pp','By the time the teacher '+T('came','sp')+' in, the students '+T('had cleaned','pp')+' the classroom.'],['before','sp','pp','Before Raka '+T('took','sp')+' the exam, he '+T('had reviewed','pp')+' all the chapters.'],['after','pp','sp','After Dika '+T('had finished','pp')+' his homework, he '+T('played','sp')+' football.']].map(([c,a,b,e])=>`<div class="ccard"><span class="conn">${c}</span><div class="slots"><div class="slotc ${a}"><small>klausa setelah <i>${c}</i></small><b>${a==='sp'?'Verb 2':'had + V3'}</b></div><div class="slotc ${b}"><small>klausa lainnya</small><b>${b==='sp'?'Verb 2':'had + V3'}</b></div></div><p class="exline small">${e}</p></div>`).join('')}
+  </div>
+  <div class="ecard key"><div class="eh"><b>Trik tiga langkah</b></div><div class="eb"><ol class="steps">
+    <li><span>Klausa setelah <b>by the time</b> atau <b>before</b> → ${T('Verb 2','sp')}</span></li>
+    <li><span>Klausa setelah <b>after</b> → ${T('had + Verb 3','pp')}</span></li>
+    <li><span>Klausa sisanya → memakai <b>kebalikannya</b></span></li></ol></div></div>
+</div>`});
+
+add('Past Perfect',{html:`<div class="wrap">
+  ${H('Bagian 3 · Latihan Trik','pp','Pasangkan rumus ke klausanya','Setiap kalimat punya dua klausa. Tentukan klausa mana yang memakai <b>Verb 2</b> dan mana yang memakai <b>had + Verb 3</b>.')}
+  ${ACT('Seret label rumus ke klausa yang tepat. Di HP: ketuk label, lalu ketuk klausanya.',`
+    <div class="bank" id="bank" aria-label="Label rumus"></div>
+    <div class="stackv" id="dd"></div>
+    <p class="small" style="font-weight:800" id="ddScore"></p>`)}
+</div>`,init(el){
+  const D=[[['The bus','(leave)','had left','pp'],['before we','(reach) the stop.','reached','sp'],'Setelah <i>before</i>: Verb 2 (reached). Klausa sisanya: had + Verb 3 (had left).'],
+           [['Dika','(play) football','played','sp'],['after he','(finish) his homework.','had finished','pp'],'Setelah <i>after</i>: had + Verb 3 (had finished). Klausa sisanya: Verb 2 (played).'],
+           [['By the time the bell','(ring),','rang','sp'],['nobody','(finish) the test.','had finished','pp'],'Setelah <i>by the time</i>: Verb 2 (rang). Klausa sisanya: had + Verb 3 (nobody had finished).'],
+           [['After the guests','(leave),','had left','pp'],['we','(clean) the house.','cleaned','sp'],'Setelah <i>after</i>: had + Verb 3 (had left). Klausa sisanya: Verb 2 (cleaned).']];
+  const bank=$('#bank',el),box=$('#dd',el);let sel=null,done=0;
+  const tags=shuffle(D.flatMap(()=>['pp','sp']));
+  tags.forEach(k=>{const b=document.createElement('button');b.className='dtag '+k;b.dataset.k=k;b.textContent=k==='pp'?'had + Verb 3':'Verb 2';bank.appendChild(b)});
+  D.forEach(([a,b,why],n)=>{const c=document.createElement('div');c.className='card';
+    const z=(x)=>`<button class="drop" data-need="${x[3]}" data-fill="${x[2]}" data-pre="${x[0]}" data-post="${x[1].replace(/^\([^)]*\)\s*/,'')}"><span class="dz-pre">${x[0]}</span> <span class="dz-slot">___</span> <span class="muted">${x[1]}</span></button>`;
+    c.innerHTML=`<p class="small muted" style="margin-bottom:8px"><span class="num">${n+1}</span>Kalimat</p><div class="dzrow">${z(a)}${z(b)}</div><div class="fb" style="margin-top:10px"></div>`;c.dataset.why=why;box.appendChild(c)});
+  const setSel=t=>{if(sel)sel.classList.remove('sel');sel=t;if(t)t.classList.add('sel')};
+  const place=(t,zn)=>{if(!t||!zn||zn.classList.contains('ok'))return;const card=zn.closest('.card'),fb=$('.fb',card);
+    if(t.dataset.k===zn.dataset.need){zn.classList.add('ok',zn.dataset.need);zn.disabled=true;zn.innerHTML=`${zn.dataset.pre} ${T(zn.dataset.fill,zn.dataset.need)} ${zn.dataset.post}`;t.remove();setSel(null);
+      if($$('.drop',card).every(d=>d.classList.contains('ok'))){fb.className='fb show ok';fb.innerHTML='<b>Tepat.</b> '+card.dataset.why;done++;$('#ddScore',el).textContent=`${done} / ${D.length} kalimat selesai`;if(done===D.length)confetti(90)}}
+    else{zn.classList.remove('shake');void zn.offsetWidth;zn.classList.add('shake');fb.className='fb show no';fb.innerHTML='<b>Belum tepat.</b> Lihat kata penghubungnya: klausa mana yang mengikutinya?';setSel(null)}};
+  /* pointer drag + tap */
+  let st=null,ghost=null,dragged=false;
+  bank.addEventListener('pointerdown',e=>{const t=e.target.closest('.dtag');if(!t)return;st={t,x:e.clientX,y:e.clientY};dragged=false;t.setPointerCapture(e.pointerId)});
+  bank.addEventListener('pointermove',e=>{if(!st)return;if(!ghost&&Math.hypot(e.clientX-st.x,e.clientY-st.y)>6){ghost=st.t.cloneNode(true);ghost.classList.add('ghost');document.body.appendChild(ghost);dragged=true;st.t.classList.add('lift')}
+    if(ghost){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';$$('.drop',el).forEach(d=>d.classList.remove('hover'));const u=document.elementFromPoint(e.clientX,e.clientY);const d=u&&u.closest('.drop');if(d)d.classList.add('hover')}});
+  const end=e=>{if(!st)return;const t=st.t;t.classList.remove('lift');if(ghost){ghost.remove();ghost=null;$$('.drop',el).forEach(d=>d.classList.remove('hover'));const u=document.elementFromPoint(e.clientX,e.clientY);place(t,u&&u.closest('.drop'))}st=null};
+  bank.addEventListener('pointerup',end);bank.addEventListener('pointercancel',e=>{if(ghost){ghost.remove();ghost=null}st=null});
+  bank.addEventListener('click',e=>{const t=e.target.closest('.dtag');if(!t)return;if(dragged){dragged=false;return}setSel(sel===t?null:t)});
+  box.addEventListener('click',e=>{const d=e.target.closest('.drop');if(d&&sel)place(sel,d)});
+}});
+
+/* ============ 4 · LANJUTAN ============ */
+add('Lanjutan',{id:'lj-a',html:`<div class="wrap">
+  ${H('Bagian 4 · Pola Lanjutan Past Perfect','pp','Pola a: kata penanda “sudah lebih dulu”','Bila kalimat bercerita tentang masa lalu dan ada petunjuk bahwa suatu kejadian sudah selesai lebih dulu, pakai <b>had + Verb 3</b>.')}
+  ${MAP(0)}
+  <div class="grid2" id="mk"></div>
+</div>`,init(el){
+  const D=[['already','sudah','When I got to the station, the train '+T('had already left','pp')+'.','Kereta berangkat sebelum saya tiba.'],['just','baru saja','She '+T('had just finished','pp')+' cooking when her guests arrived.','Dia baru saja selesai memasak ketika tamunya datang.'],['never','belum pernah','Before the trip to Bali, Tono '+T('had never seen','pp')+' the sea.','Sebelum perjalanan ke Bali, Tono belum pernah melihat laut.'],['not … yet','belum','The teacher collected the essays, but Dewi '+T('had not finished','pp')+' hers yet.','Guru mengumpulkan esai, tetapi Dewi belum selesai.'],['by + waktu lampau','paling lambat pada saat itu sudah …',M('By 8 p.m. last night')+', I '+T('had finished','pp')+' all my homework.','Pukul 8 malam tadi, saya sudah menyelesaikan semua PR.']];
+  $('#mk',el).innerHTML=D.map(([w,m,e,i])=>`<div class="mcard"><div class="mw"><span>${w}</span><small>${m}</small></div><div class="mx"><p class="exline">${e}</p><p class="muted small">${i}</p></div></div>`).join('');
+}});
+
+add('Lanjutan',{id:'lj-b',html:`<div class="wrap">
+  ${H('Bagian 4 · Pola Lanjutan Past Perfect','pp','Pola b: when, perhatikan urutannya','Dua kalimat ini sama-sama benar, tetapi urutan kejadiannya berbeda.')}
+  ${MAP(1)}
+  ${ACT('Ganti kalimat untuk melihat perbedaannya di garis waktu.',`<div class="tabs" id="whTabs"><button class="tab" aria-selected="true" data-k="0">When I arrived, she left.</button><button class="tab" aria-selected="false" data-k="1">When I arrived, she had left.</button></div><div class="card" id="whOut"></div>`)}
+  <div class="grid2"><div class="note"><b>Simple Past + Simple Past</b><p>Kejadian berurutan: yang disebut setelah <i>when</i> terjadi lebih dulu.</p></div><div class="note"><b>Simple Past + Past Perfect</b><p>Had + Verb 3 menandai kejadian yang sudah selesai lebih dulu.</p></div></div>
+</div>`,init(el){
+  const D=[[TL('seq',{a:'arrived',c:'left',b:'① saya tiba',d:'② dia pergi'}),'Saya tiba lebih dulu, lalu dia pergi.'],[TL('pp',{a:'had left',c:'arrived',b:'① dia pergi',d:'② saya tiba'}),'Dia pergi lebih dulu, baru saya tiba.']];
+  const show=k=>{$$('.tab',el).forEach(t=>t.setAttribute('aria-selected',+t.dataset.k===k));$('#whOut',el).innerHTML=`${D[k][0]}<p class="exline" style="text-align:center">${D[k][1]}</p>`};
+  $$('.tab',el).forEach(t=>t.onclick=()=>show(+t.dataset.k));show(0);
+}});
+
+add('Lanjutan',{id:'lj-c',html:`<div class="wrap">
+  ${H('Bagian 4 · Pola Lanjutan Past Perfect','pp','Pola c: kalimat tidak langsung','Bila ucapan dilaporkan dengan <i>said</i> atau <i>told</i>, kata kerjanya mundur satu tingkat.')}
+  ${MAP(2)}
+  <div class="shiftrow">
+    <div class="shift"><span class="pill sp">Simple Past</span><span class="arr">→</span><span class="pill pp">Past Perfect</span></div>
+    <div class="shift"><span class="pill prp">Present Perfect</span><span class="arr">→</span><span class="pill pp">Past Perfect</span></div>
+    <div class="shift"><span class="pill" style="color:var(--muted);border-color:var(--line);background:var(--soft)">Simple Present</span><span class="arr">→</span><span class="pill sp">Simple Past</span></div>
+  </div>
+  ${ACT('Ketuk kalimat langsung untuk melihat bentuk tidak langsungnya.','<div class="stackv" id="rs"></div>')}
+  <p class="foot">Bila hal yang dilaporkan masih benar sekarang, penutur sering tidak memundurkan kata kerja. Latihan di sini mengikuti aturan bakunya.</p>
+</div>`,init(el){
+  const D=[['"I '+T('lost','sp')+' my wallet."','Tono said that he '+T('had lost','pp')+' his wallet.'],['"I '+T('have finished','prp')+' the report."','Rina said that she '+T('had finished','pp')+' the report.'],['"We '+T('visited','sp')+' the museum."','They told me that they '+T('had visited','pp')+' the museum.'],['"I <span class="t" style="color:var(--muted);background:var(--soft)">am</span> tired."','She said that she '+T('was','sp')+' tired.']];
+  const box=$('#rs',el);D.forEach(([a,b])=>{const x=document.createElement('button');x.className='opt';x.style.flexDirection='column';x.style.gap='4px';x.innerHTML=`<span>${a}</span><span class="reveal" style="font-weight:600">→ ${b}</span>`;x.onclick=()=>$('.reveal',x).classList.toggle('show');box.appendChild(x)});
+}});
+
+add('Lanjutan',{id:'lj-d',html:`<div class="wrap">
+  ${H('Bagian 4 · Pola Lanjutan Past Perfect','pp','Pola d: pengandaian masa lalu dan wish','Dipakai untuk hal yang <b>tidak terjadi</b> di masa lalu.')}
+  ${MAP(3)}
+  <div class="grid2">
+    <div class="ecard pp"><div class="eh"><b>Conditional tipe 3</b><small>klausa If</small></div><div class="eb"><p class="formula">${FX('If + had + V3')}</p></div></div>
+    <div class="ecard pp"><div class="eh"><b>Conditional tipe 3</b><small>klausa utama</small></div><div class="eb"><p class="formula">${FX('would have + V3')}</p></div></div>
+  </div>
+  <div class="stackv">
+    <div class="exq"><p class="exline">If I ${T('had studied','pp')} harder, I ${T('would have passed','pp')} the test.</p><p class="muted small">Kenyataannya: saya tidak belajar lebih keras dan tidak lulus.</p></div>
+    <div class="exq"><p class="exline">If they ${T('had left','pp')} earlier, they ${T('would not have missed','pp')} the train.</p><p class="muted small">Kenyataannya: mereka tidak berangkat lebih awal dan ketinggalan kereta.</p></div>
+    <div class="exq"><p class="exline">I wish I ${T('had studied','pp')} harder.</p><p class="muted small">Wish + had + V3: menyesali masa lalu.</p></div>
+  </div>
+</div>`});
+
+/* ============ 5 · VS PRESENT PERFECT ============ */
+add('vs Present Perfect',{html:`<div class="wrap">
+  ${H('Bagian 5 · Pembanding','prp','Simple Past atau Present Perfect?','Present Perfect (S + have/has + Verb 3) mengaitkan masa lalu dengan keadaan <b>sekarang</b>. Pakai <i>has</i> untuk he, she, it, dan subjek tunggal.')}
+  <div class="grid2">
+    <div class="ecard sp"><div class="eh"><b>Simple Past</b><small>S + Verb 2</small></div><div class="eb">
+      <div><span class="lab">Waktu lampau tunggal</span><div class="chips">${['yesterday','last week','last year','two days ago','in 2020'].map(x=>`<span class="mchip">${x}</span>`).join('')}</div></div>
+      <div class="exq"><p class="exline">I ${T('visited','sp')} Bali last year.</p></div></div></div>
+    <div class="ecard prp"><div class="eh"><b>Present Perfect</b><small>S + have/has + Verb 3</small></div><div class="eb">
+      <div><span class="lab">Berlanjut sampai sekarang</span>
+        <div class="sig"><span class="mchip strong">since + titik waktu</span><span class="muted small">since 2020 · since Monday</span></div>
+        <div class="sig"><span class="mchip strong">for + durasi</span><span class="muted small">for five years · for two hours</span></div></div>
+      <div class="exq"><p class="exline">We ${T('have lived','prp')} in Surakarta since 2020.</p></div>
+      <div><span class="lab">Pengalaman atau hasil sampai sekarang</span><div class="chips">${['so far','ever','never','yet'].map(x=>`<span class="mchip">${x}</span>`).join('')}</div></div>
+      <div class="exq"><p class="exline">${T('Have','prp')} you ever ${T('visited','prp')} Bali?</p></div></div></div>
+  </div>
+  <div class="ecard key"><div class="eh"><b>Aturan emas</b></div><div class="eb"><p>Penanda waktu lampau tunggal <b>tidak pernah</b> bersama <i>have/has</i>.</p></div></div>
+</div>`});
+
+add('vs Present Perfect',{html:`<div class="wrap">
+  ${H('Bagian 5 · Bandingkan','prp','Beda bentuk, beda makna','Kata yang sama (misalnya <i>for</i>) bisa muncul di kedua tense. Yang membedakan: apakah keadaannya masih berlaku sekarang.')}
+  ${ACT('Pilih pasangan kalimat, lalu bandingkan maknanya.',`<div class="tabs" id="pairTabs"></div><div class="grid2" id="pairOut"></div>`)}
+</div>`,init(el){
+  const P=[['for five years',['She '+T('lived','sp')+' in Bandung for five years.','Sekarang tidak tinggal di sana.'],['She '+T('has lived','prp')+' in Bandung for five years.','Masih tinggal di sana.']],['yesterday / yet',[T('Did','sp')+' you '+T('finish','sp')+' the report yesterday?','Waktu lampau yang jelas.'],[T('Have','prp')+' you '+T('finished','prp')+' the report yet?','Sudah atau belum, sampai sekarang.']],['last week / twice',['I '+T('saw','sp')+' that film last week.','Satu kejadian, waktunya jelas.'],['I '+T('have seen','prp')+' that film twice.','Jumlah pengalaman sampai sekarang.']]];
+  const tabs=$('#pairTabs',el),out=$('#pairOut',el);
+  const show=k=>{$$('.tab',tabs).forEach((t,j)=>t.setAttribute('aria-selected',j===k));const [,a,b]=P[k];out.innerHTML=`<div class="ecard sp"><div class="eh"><b>Simple Past</b></div><div class="eb"><p class="exline">${a[0]}</p><p class="muted small">${a[1]}</p></div></div><div class="ecard prp"><div class="eh"><b>Present Perfect</b></div><div class="eb"><p class="exline">${b[0]}</p><p class="muted small">${b[1]}</p></div></div>`};
+  P.forEach((p,k)=>{const b=document.createElement('button');b.className='tab';b.textContent=p[0];b.onclick=()=>show(k);tabs.appendChild(b)});show(0);
+}});
+
+add('vs Present Perfect',{html:`<div class="wrap">
+  ${H('Bagian 5 · Hubungan dengan Past Perfect','pp','Present Perfect vs Past Perfect: beda titik acuan','Keduanya menghitung hasil yang sudah selesai. Bedanya ada pada <b>titik acuan</b> waktunya.')}
+  <div class="grid2">
+    <div class="ecard prp"><div class="eh"><b>Present Perfect</b><small>hasil sampai <u>sekarang</u></small></div><div class="eb">${TL('prpref')}<div class="exq"><p class="exline">I ${T('have finished','prp')} my homework.</p><p class="muted small">Sekarang sudah selesai.</p></div></div></div>
+    <div class="ecard pp"><div class="eh"><b>Past Perfect</b><small>hasil sampai <u>satu titik di masa lalu</u></small></div><div class="eb">${TL('ppref')}<div class="exq"><p class="exline">By 8 p.m. last night, I ${T('had finished','pp')} my homework.</p><p class="muted small">Pada pukul 8 tadi malam sudah selesai.</p></div></div></div>
+  </div>
+  ${ACT('Pilih bentuk yang tepat sesuai titik acuannya.','<div class="stackv" id="refq"></div>')}
+</div>`,init(el){
+  const Q=[['I ___ my homework. (Sekarang sudah selesai.)',['have finished','had finished'],0,'Titik acuannya sekarang → Present Perfect.'],['By 8 p.m. last night, I ___ my homework.',['have finished','had finished'],1,'Titik acuannya pukul 8 tadi malam (masa lalu) → Past Perfect.']];
+  const box=$('#refq',el);Q.forEach(([q,o,a,why])=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<p class="exline">${q.replace('___','<span class="blank">___</span>')}</p><div class="row" style="margin-top:10px">${o.map((x,i)=>`<button class="btn sm" data-i="${i}">${x}</button>`).join('')}</div><div class="fb" style="margin-top:10px"></div>`;
+    const fb=$('.fb',c);$$('[data-i]',c).forEach(b=>b.onclick=()=>{const ok=+b.dataset.i===a;fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=(ok?'<b>Tepat.</b> ':'<b>Belum tepat.</b> ')+why});box.appendChild(c)});
+}});
+
+/* ============ 6 · PENGAYAAN ============ */
+add('Pengayaan',{html:`<div class="wrap">
+  ${H('Bagian 6 · Pengayaan','','Used to dan Past Perfect Continuous','Dua bentuk tambahan untuk bercerita tentang masa lalu. Pengayaan ini tidak diujikan di latihan.')}
+  <div class="grid2">
+    <div class="ecard sp"><div class="eh"><b>Used to</b><small>kebiasaan lama yang sudah tidak berlaku</small></div><div class="eb">
+      <div><span class="lab">Fungsi</span><p>Kebiasaan atau keadaan di masa lalu yang <b>sekarang sudah tidak berlaku</b>.</p></div>
+      <div><span class="lab">Rumus</span><ul class="fl"><li><i>(+)</i>${FX('S + used to + V1')}</li><li><i>(−)</i>${FX('S + did not use to + V1')}</li><li><i>(?)</i>${FX('Did + S + use to + V1?')}</li></ul></div>
+      <div><span class="lab">Contoh</span><div class="stackv"><div class="exq"><p class="exline">I ${T('used to play','sp')} football every afternoon when I was in elementary school.</p></div><div class="exq"><p class="exline">${T('Did','sp')} you ${T('use to walk','sp')} to school?</p></div></div></div></div></div>
+    <div class="ecard ppc"><div class="eh"><b>Past Perfect Continuous</b><small>sudah berlangsung selama …, sebelum kejadian lain</small></div><div class="eb">
+      <div><span class="lab">Fungsi</span><p>Kegiatan yang sudah berlangsung selama suatu durasi sebelum kejadian lampau lain.</p></div>
+      <div><span class="lab">Rumus</span><ul class="fl"><li><i>(+)</i>${FX('S + had been + V‑ing')}</li></ul></div>
+      <div><span class="lab">Penanda</span><div class="chips"><span class="mchip">for + durasi</span><span class="mchip">since + titik waktu</span></div></div>
+      ${TL('ppc')}
+      <div><span class="lab">Contoh</span><div class="exq"><p class="exline">By the time the bus ${T('came','sp')}, we ${T('had been waiting','pp')} for an hour.</p><p class="muted small">Ketika bus datang, kami sudah menunggu selama satu jam.</p></div></div></div></div>
+  </div>
+</div>`});
+
+/* ---- speech (Web Speech API) ---- */
+const SPEAK={rate:.85,voice:null,ok:'speechSynthesis' in window};
+function pickVoice(){if(!SPEAK.ok)return;const v=speechSynthesis.getVoices();SPEAK.voice=v.find(x=>/en-GB/i.test(x.lang)&&/google|natural|neural|daniel|serena|libby|sonia/i.test(x.name))||v.find(x=>/en-GB/i.test(x.lang))||v.find(x=>/en-US/i.test(x.lang)&&/google|natural|neural|samantha|aria|jenny/i.test(x.name))||v.find(x=>/^en/i.test(x.lang))||null;document.dispatchEvent(new Event('voiceready'))}
+if(SPEAK.ok){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+function say(text,btn){if(!SPEAK.ok)return false;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang=SPEAK.voice?SPEAK.voice.lang:'en-GB';if(SPEAK.voice)u.voice=SPEAK.voice;u.rate=SPEAK.rate;
+  if(btn){$$('.spk.playing').forEach(x=>x.classList.remove('playing'));btn.classList.add('playing');u.onend=u.onerror=()=>btn.classList.remove('playing')}speechSynthesis.speak(u);return true}catch(e){return false}}
+const SPK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>';
+const WB=(w,ipa)=>`<button class="wbtn spk" data-say="${w}" aria-label="Dengarkan ${w}">${SPK}<span><b>${w}</b><small>${ipa}</small></span></button>`;
+add('Pengayaan',{html:`<div class="wrap">
+  ${H('Bagian 6 · Pelafalan','','Bunyi akhiran ‑ed: /t/, /d/, atau /ɪd/','Tulisannya sama-sama <b>-ed</b>, tetapi bunyinya bergantung pada bunyi akhir kata dasarnya. Ketuk kata untuk mendengarkan.')}
+  <div class="audiobar" id="abar"><span class="ab-ic">${SPK}</span><span id="vstat" class="small">Menyiapkan suara…</span><span class="row" style="gap:6px;margin-left:auto" role="group" aria-label="Kecepatan suara"><button class="btn sm sel" data-rate=".85">Normal</button><button class="btn sm" data-rate=".55">Pelan</button></span></div>
+  <div class="grid3">
+    <div class="ecard ed1"><div class="eh"><b>/t/</b><small>bunyi akhir tak bersuara</small></div><div class="eb"><p class="small">/p/, /k/, /f/, /s/, /ʃ/ (sh), /tʃ/ (ch)</p><div class="wgrid">${WB('helped','/helpt/')}${WB('watched','/wɒtʃt/')}${WB('washed','/wɒʃt/')}</div></div></div>
+    <div class="ecard ed2"><div class="eh"><b>/d/</b><small>bunyi akhir bersuara (selain /d/)</small></div><div class="eb"><p class="small">vokal, /l/, /n/, /v/, dan bunyi bersuara lain</p><div class="wgrid">${WB('played','/pleɪd/')}${WB('opened','/ˈəʊpənd/')}${WB('moved','/muːvd/')}</div></div></div>
+    <div class="ecard ed3"><div class="eh"><b>/ɪd/</b><small>bunyi akhir /t/ atau /d/</small></div><div class="eb"><p class="small">tambah satu suku kata</p><div class="wgrid">${WB('wanted','/ˈwɒntɪd/')}${WB('needed','/ˈniːdɪd/')}${WB('started','/ˈstɑːtɪd/')}</div></div></div>
+  </div>
+  ${ACT('Kata baru: dengarkan dulu, lalu pilih bunyi akhiran -ed yang tepat.',`<div class="grid3" id="ed"></div><p class="small" style="font-weight:800" id="edSc"></p>`)}
+  <p class="foot">Suara dibacakan oleh perangkatmu sendiri, jadi logatnya bisa berbeda antarperangkat. Transkripsi memakai pelafalan British English.</p>
+</div>`,init(el){
+  const W=[['cooked','/t/','/k/ tak bersuara','/kʊkt/'],['laughed','/t/','/f/ tak bersuara','/lɑːft/'],['missed','/t/','/s/ tak bersuara','/mɪst/'],['called','/d/','/l/ bersuara','/kɔːld/'],['cleaned','/d/','/n/ bersuara','/kliːnd/'],['stayed','/d/','vokal bersuara','/steɪd/'],['visited','/ɪd/','berakhir /t/','/ˈvɪzɪtɪd/'],['decided','/ɪd/','berakhir /d/','/dɪˈsaɪdɪd/'],['ended','/ɪd/','berakhir /d/','/ˈendɪd/']];
+  const box=$('#ed',el);let got=0;shuffle(W).forEach(([w,a,why,ipa])=>{const c=document.createElement('div');c.className='card';c.style.padding='10px 12px';c.innerHTML=`<div class="row" style="gap:8px;flex-wrap:nowrap"><button class="spk ic" data-say="${w}" aria-label="Dengarkan ${w}">${SPK}</button><b style="font-size:1.05rem">${w}</b></div><div class="row" style="gap:6px;margin-top:8px;flex-wrap:nowrap">${['/t/','/d/','/ɪd/'].map(s=>`<button class="btn sm ch" style="min-width:52px">${s}</button>`).join('')}</div><p class="muted small reveal" style="margin-top:6px"><b style="color:var(--text)">${ipa}</b> · ${why}</p>`;
+    let done=false;$$('.ch',c).forEach(b=>b.onclick=()=>{if(done)return;const ok=b.textContent===a;b.style.background=ok?'var(--ok-bg)':'var(--bad-bg)';b.style.borderColor=ok?'var(--ok)':'var(--bad)';if(ok){done=true;got++;$('.reveal',c).classList.add('show');say(w);$('#edSc',el).textContent=`${got} / ${W.length} benar`;if(got===W.length)confetti(60)}});box.appendChild(c)});
+  const stat=$('#vstat',el);
+  const upd=()=>{if(!SPEAK.ok){stat.textContent='Perangkat ini tidak mendukung suara. Gunakan transkripsi di bawah kata.';$('#abar',el).classList.add('off');$$('.spk',el).forEach(b=>b.disabled=true);return}
+    stat.innerHTML=SPEAK.voice?`Suara: <b>${SPEAK.voice.name.replace(/\s*\(.*\)/,'')}</b> (${SPEAK.voice.lang})`:'Suara bahasa Inggris belum ditemukan. Perangkat akan memakai suara bawaan.'};
+  upd();document.addEventListener('voiceready',upd);
+  el.addEventListener('click',e=>{const b=e.target.closest('.spk');if(b&&!b.disabled){if(!say(b.dataset.say,b))stat.textContent='Suara gagal diputar. Coba ketuk sekali lagi.'}
+    const r=e.target.closest('[data-rate]');if(r){SPEAK.rate=+r.dataset.rate;$$('[data-rate]',el).forEach(x=>x.classList.toggle('sel',x===r))}});
+}});
+
+const IV='be|was/were|been|adalah, ada;beat|beat|beaten|memukul, mengalahkan;become|became|become|menjadi;begin|began|begun|memulai;bend|bent|bent|membengkokkan;bet|bet|bet|bertaruh;bite|bit|bitten|menggigit;blow|blew|blown|meniup;break|broke|broken|mematahkan, memecahkan;bring|brought|brought|membawa;broadcast|broadcast|broadcast|menyiarkan;build|built|built|membangun;burst|burst|burst|meledak, pecah;buy|bought|bought|membeli;catch|caught|caught|menangkap;choose|chose|chosen|memilih;come|came|come|datang;cost|cost|cost|berharga, menelan biaya;creep|crept|crept|merayap;cut|cut|cut|memotong;deal|dealt|dealt|menangani, berurusan;dig|dug|dug|menggali;do|did|done|melakukan;draw|drew|drawn|menggambar;drink|drank|drunk|minum;drive|drove|driven|mengemudi;eat|ate|eaten|makan;fall|fell|fallen|jatuh;feed|fed|fed|memberi makan;feel|felt|felt|merasa;fight|fought|fought|berkelahi, bertarung;find|found|found|menemukan;flee|fled|fled|melarikan diri;fly|flew|flown|terbang;forbid|forbade|forbidden|melarang;forget|forgot|forgotten|lupa;forgive|forgave|forgiven|memaafkan;freeze|froze|frozen|membeku;get|got|gotten (AS) · got (UK)|mendapat, tiba;give|gave|given|memberi;go|went|gone|pergi;grow|grew|grown|tumbuh;hang|hung|hung|menggantung*;have|had|had|memiliki;hear|heard|heard|mendengar;hide|hid|hidden|bersembunyi, menyembunyikan;hit|hit|hit|memukul;hold|held|held|memegang, menyelenggarakan;hurt|hurt|hurt|melukai, terasa sakit;keep|kept|kept|menyimpan, menjaga;kneel|knelt|knelt|berlutut;know|knew|known|tahu, mengenal;lay|laid|laid|meletakkan;lead|led|led|memimpin;leave|left|left|meninggalkan, pergi;lend|lent|lent|meminjamkan;let|let|let|membiarkan;lie|lay|lain|berbaring*;light|lit|lit|menyalakan;lose|lost|lost|kehilangan, kalah;make|made|made|membuat;mean|meant|meant|berarti, bermaksud;meet|met|met|bertemu;pay|paid|paid|membayar;put|put|put|menaruh;read|read /red/|read /red/|membaca;ride|rode|ridden|mengendarai;ring|rang|rung|berbunyi, menelepon;rise|rose|risen|naik, terbit;run|ran|run|berlari;say|said|said|berkata;see|saw|seen|melihat;seek|sought|sought|mencari;sell|sold|sold|menjual;send|sent|sent|mengirim;set|set|set|menetapkan, mengatur;sew|sewed|sewn / sewed|menjahit;shake|shook|shaken|mengguncang, menjabat (tangan);shine|shone|shone|bersinar;shoot|shot|shot|menembak;show|showed|shown / showed|menunjukkan;shrink|shrank|shrunk|menyusut;shut|shut|shut|menutup;sing|sang|sung|bernyanyi;sink|sank|sunk|tenggelam;sit|sat|sat|duduk;sleep|slept|slept|tidur;slide|slid|slid|meluncur, menggeser;speak|spoke|spoken|berbicara;spend|spent|spent|menghabiskan (uang/waktu);spit|spat|spat|meludah;split|split|split|membelah;spread|spread|spread|menyebarkan;spring|sprang|sprung|melompat, memancar;stand|stood|stood|berdiri;steal|stole|stolen|mencuri;stick|stuck|stuck|menempel;sting|stung|stung|menyengat;stink|stank|stunk|berbau busuk;strike|struck|struck|memukul, menyerang;swear|swore|sworn|bersumpah;sweep|swept|swept|menyapu;swim|swam|swum|berenang;swing|swung|swung|berayun;take|took|taken|mengambil;teach|taught|taught|mengajar;tear|tore|torn|merobek;tell|told|told|memberi tahu;think|thought|thought|berpikir;throw|threw|thrown|melempar;understand|understood|understood|memahami;wake|woke|woken|bangun;wear|wore|worn|memakai (pakaian);weep|wept|wept|menangis;win|won|won|menang;write|wrote|written|menulis'.split(';').map(r=>r.split('|'));
+add('Pengayaan',{html:`<div class="wrap">
+  ${H('Referensi','',`${IV.length} kata kerja tak beraturan`,'Sumber daftar: <i>Irregular Verbs</i>, Cambridge English in Use. Arti dalam bahasa Indonesia ditambahkan untuk membantu.')}
+  ${ACT('Cari kata kerja, atau jelajahi halaman dengan tombol nomor.',`
+    <input class="line-in" id="vq" type="search" placeholder="Cari: go, membeli, taught…" aria-label="Cari kata kerja">
+    <div class="vhead"><span>Verb 1</span><span>Verb 2</span><span>Verb 3</span><span>Arti</span></div>
+    <nav class="pager" data-pg aria-label="Halaman"></nav>
+    <div class="vlist" id="vt"></div>
+    <nav class="pager" data-pg aria-label="Halaman"></nav>`)}
+  <p class="foot">* <b>hang → hanged</b> (beraturan) bila berarti menghukum gantung. * <b>lie → lied</b> (beraturan) bila berarti berbohong. <b>Read</b> Verb 2 dan Verb 3 ditulis sama tetapi dilafalkan /red/.</p>
+</div>`,init(el){
+  const PER=12;let page=0,list=IV;const tb=$('#vt',el),pgs=$$('[data-pg]',el);
+  const draw=()=>{const n=Math.max(1,Math.ceil(list.length/PER));page=Math.min(page,n-1);const rows=list.slice(page*PER,page*PER+PER);
+    tb.innerHTML=rows.length?rows.map(v=>`<div class="vrow"><b>${v[0]}</b><span class="v2">${v[1]}</span><span class="v3">${v[2]}</span><span class="muted">${v[3]}</span></div>`).join(''):'<p class="muted" style="padding:12px">Tidak ditemukan. Coba kata lain.</p>';
+    let h=`<button class="pgb" data-p="${page-1}" ${page===0?'disabled':''} aria-label="Halaman sebelumnya">«</button>`;const win=[...new Set([0,n-1,page-1,page,page+1].filter(i=>i>=0&&i<n))].sort((a,b)=>a-b);let last=-1;win.forEach(i=>{if(i-last>1)h+='<span class="pgdots">…</span>';h+=`<button class="pgb${i===page?' on':''}" data-p="${i}" aria-label="Halaman ${i+1}" ${i===page?'aria-current="page"':''}>${i+1}</button>`;last=i});h+=`<button class="pgb" data-p="${page+1}" ${page>=n-1?'disabled':''} aria-label="Halaman berikutnya">»</button>`;
+    const html=h+`<span class="muted small" style="margin-left:6px">${list.length?page*PER+1:0}–${Math.min(list.length,page*PER+PER)} dari ${list.length}</span>`;pgs.forEach(p=>p.innerHTML=html)};
+  pgs.forEach((pg,j)=>pg.onclick=e=>{const b=e.target.closest('.pgb');if(!b||b.disabled)return;page=+b.dataset.p;draw();if(j===1)el.querySelector('.vhead').scrollIntoView({block:'start',behavior:'smooth'})});
+  $('#vq',el).oninput=e=>{const q=e.target.value.toLowerCase().trim();list=q?IV.filter(v=>v.some(x=>x.toLowerCase().includes(q))):IV;page=0;draw()};draw();
+}});
+
+/* ============ STRATEGI ============ */
+add('Strategi',{html:`<div class="wrap">
+  ${H('Strategi','','Tense Finder','Alat bantu memilih tense. Jawab pertanyaan satu per satu dan berhenti pada jawaban <b>Ya</b> yang pertama.')}
+  <ol class="howto"><li><b>1</b><span>Baca kalimat di papan</span></li><li><b>2</b><span>Jawab Ya / Tidak</span></li><li><b>3</b><span>Isi titik-titiknya</span></li></ol>
+  <section class="specimen" aria-label="Kalimat yang diperiksa">
+    <div class="sp-top"><span class="sp-lab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Kalimat yang diperiksa</span><button class="btn sm ghostw" id="tfNew">Ganti kalimat ↻</button></div>
+    <p class="sp-sent" id="tfS"></p>
+  </section>
+  <section class="finder" aria-label="Pertanyaan Tense Finder">
+    <div class="stepper" id="tfStep"></div>
+    <div id="tfBox" class="stackv"></div>
+  </section>
+</div>`,init(el){
+  const Q=[
+    ['Ada <b>by the time</b>, <b>before</b>, atau <b>after</b>?','pp','Klausa setelah by the time / before = Verb 2. Klausa setelah after = had + Verb 3. Klausa lainnya memakai kebalikannya.'],
+    ['Ada <b>already, just, never, not … yet</b>, atau <b>by + waktu lampau</b> yang terjadi sebelum kejadian lampau lain?','pp','Kejadian yang selesai lebih dulu memakai had + Verb 3.'],
+    ['Ada <b>said</b> atau <b>told</b> yang melaporkan ucapan masa lalu?','pp','Mundurkan kata kerja satu tingkat: Simple Past dan Present Perfect menjadi had + Verb 3.'],
+    ['Ada pengandaian masa lalu (<b>If … would have + V3</b>)?','pp','Klausa If memakai had + Verb 3, klausa utama memakai would have + Verb 3.'],
+    ['Ada <b>while</b>?','pc','Klausa while memakai was/were + Verb-ing.'],
+    ['Ada <b>when</b> dan kejadian mendadak?','pc','Klausa when = Verb 2. Kegiatan yang sedang berlangsung = was/were + Verb-ing.'],
+    ['Ada titik waktu spesifik (<b>at this time yesterday</b>, <b>at 8 p.m. last night</b>)?','pc','Kegiatan yang sedang berlangsung = was/were + Verb-ing. Kejadian sesaat = Verb 2.'],
+    ['Ada <b>since</b>, <b>for</b> (sampai sekarang), <b>so far</b>, <b>ever</b>, atau <b>yet</b> tanpa penanda lampau tunggal?','prp','Pakai Present Perfect: have/has + Verb 3.'],
+    ['Hanya ada <b>yesterday</b>, <b>last …</b>, atau <b>… ago</b>?','sp','Pakai Verb 2.']];
+  const SS=[['My cousin ___ (visit) us two weeks ago.',['visited']],['While the teacher ___ (explain) the lesson, two students were whispering.',['was explaining']],['By the time we ___ (reach) the station, the train had already left.',['reached']],['Nina ___ (cook) dinner when the electricity suddenly went off.',['was cooking']],['After the match ___ (end), the fans left the stadium quietly.',['had ended']],['At this time yesterday, we ___ (take) the final exam.',['were taking']],['We ___ (live) in Surakarta since 2020.',['have lived']],['My sister ___ (not / finish) her homework yet.',['has not finished',"hasn't finished"]],['If I ___ (study) harder, I would have passed the test.',['had studied']],['"I lost my wallet," Tono said. Tono said that he ___ (lose) his wallet.',['had lost']],['When the bell rang, the students ___ (already / leave) the classroom.',['had already left']],['By 8 p.m. last night, I ___ (finish) all my homework.',['had finished']]];
+  let i=0,si=-1,found=-1;const box=$('#tfBox',el),stp=$('#tfStep',el);
+  const steps=()=>{stp.innerHTML=Q.map((_,k)=>`<span class="sd ${k<i?'no':k===i&&found<0?'cur':k===found?'yes':''}" title="Langkah ${k+1}">${k<i?'✕':k===found?'✓':k+1}</span>`).join('')};
+  const newS=()=>{let n;do{n=Math.random()*SS.length|0}while(n===si);si=n;$('#tfS',el).innerHTML=SS[n][0].replace('___','<span class="blank">___</span>');i=0;found=-1;draw()};
+  const draw=()=>{steps();if(i>=Q.length){box.innerHTML=`<p class="qbig">Semua jawaban “Tidak”.</p><p class="muted">Baca ulang kalimatnya dan cari kata penanda yang terlewat.</p><button class="btn sm" id="tfR">Mulai lagi dari langkah 1</button>`;$('#tfR',box).onclick=()=>{i=0;draw()};return}
+    box.innerHTML=`<span class="eyebrow">Langkah ${i+1} dari ${Q.length}</span><p class="qbig">${Q[i][0]}</p><div class="row"><button class="btn primary" id="tfY">Ya</button><button class="btn" id="tfN">Tidak</button>${i>0?'<button class="btn sm" id="tfB" style="margin-left:auto">‹ Langkah sebelumnya</button>':''}</div>`;
+    $('#tfY',box).onclick=()=>{found=i;steps();const [,k,r]=Q[i];
+      box.innerHTML=`<div class="result"><span class="pill ${k}">${NAME[k]}</span><p class="qbig" style="margin-top:8px">${r}</p></div><div class="card"><span class="lab">Langkah 3 · Isi titik-titiknya</span><div class="row" style="margin-top:6px"><input class="fill" id="tfIn" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Jawaban"><button class="btn sm dark" id="tfC">Periksa</button><button class="btn sm" id="tfR">Ulangi langkah</button></div><div class="fb" id="tfFb" style="margin-top:10px"></div></div>`;
+      $('#tfR',box).onclick=()=>{i=0;found=-1;draw()};
+      const chk=()=>{const v=$('#tfIn',box).value,ok=SS[si][1].some(a=>norm(a)===norm(v));$('#tfIn',box).className='fill '+(ok?'ok':'no');const f=$('#tfFb',box);f.className='fb show '+(ok?'ok':'no');f.innerHTML=ok?'<b>Benar!</b> Tekan “Ganti kalimat” untuk mencoba kalimat lain.':`<b>Belum tepat.</b> Kunci: <b>${SS[si][1][0]}</b>. Kalau hasil Tense Finder-mu berbeda, cek lagi jawaban Ya/Tidak-mu.`};
+      $('#tfC',box).onclick=chk;$('#tfIn',box).addEventListener('keydown',e=>{if(e.key==='Enter')chk()})};
+    $('#tfN',box).onclick=()=>{i++;draw()};const bb=$('#tfB',box);if(bb)bb.onclick=()=>{i--;draw()}};
+  $('#tfNew',el).onclick=newS;newS();
+}});
+
+add('Strategi',{html:`<div class="wrap">
+  ${H('Strategi','','Enam kesalahan yang sering muncul','Setiap kartu berisi kalimat keliru. Balik untuk melihat perbaikan dan alasannya.')}
+  ${ACT('Ketuk kartu untuk membaliknya.',`<div class="grid2" id="errs"></div>`)}
+</div>`,init(el){
+  const E=[['She has left two days ago.','She left two days ago.','<i>Ago</i> menuntut Simple Past, bukan Present Perfect.'],['She did not went home.','She did not go home.','Setelah <i>did not</i>, kata kerja kembali ke Verb 1.'],['They had went home.','They had gone home.','Setelah <i>had</i>, pakai Verb 3, bukan Verb 2.'],['By the time we arrived, the film started.','By the time we arrived, the film had started.','Klausa lain di rumus <i>by the time</i> memakai had + Verb 3.'],['By the time we had arrived, the film had started.','By the time we arrived, the film had started.','Klausa setelah <i>by the time</i> memakai Verb 2.'],['I took a shower when the lights went out. (maksudnya: mandi terpotong)','I was taking a shower when the lights went out.','Kegiatan yang terpotong memakai was/were + Verb-ing.']];
+  const box=$('#errs',el);E.forEach(([w,r,why])=>{const b=document.createElement('button');b.className='flip';b.innerHTML=`<div class="in"><div class="face f"><span class="tag bad">✗ Keliru</span><p class="ph strike">${w}</p><span class="more">Lihat perbaikan ›</span></div><div class="face b"><span class="tag good">✓ Perbaikan</span><p class="ph">${r}</p><p class="muted small">${why}</p></div></div>`;b.onclick=()=>b.classList.toggle('on');box.appendChild(b)});
+}});
+
+/* ============ KUIS (Latihan A) ============ */
+const QA=[
+ {q:'Rina ___ to Surakarta two years ago.',o:['has moved','moved','moves','is moving'],a:'moved',k:'sp',e:'<i>Ago</i> adalah penanda waktu lampau tunggal, jadi Simple Past. Present Perfect (<i>has moved</i>) tidak dipakai dengan <i>ago</i>.'},
+ {q:'Dina was watching TV when her brother suddenly ___ home.',o:['arrives','has arrived','had arrived','arrived'],a:'arrived',k:'sp',e:'Dina sedang menonton (kegiatan berlangsung), lalu kakaknya tiba mendadak. Klausa <i>when</i> memakai Verb 2.'},
+ {q:'By the time the rescue team arrived, the villagers ___ the flooded village.',o:['had left','left','have left','leave'],a:'had left',k:'pp',e:'Klausa setelah <i>by the time</i> memakai Verb 2 (<i>arrived</i>), maka klausa lainnya memakai had + Verb 3. Warga pergi lebih dulu daripada tim tiba.'},
+ {q:'Our class ___ a speech contest last semester.',o:['has held','holds','held','is holding'],a:'held',k:'sp',e:'Penanda waktu lampau tunggal, jadi Simple Past. Hold, held, held.'},
+ {q:'While Andi ___ the guitar, his sister was singing.',o:['had played','was playing','plays','has played'],a:'was playing',k:'pc',e:'Klausa <i>while</i> memakai was/were + Verb-ing. Andi bermain gitar dan adiknya bernyanyi pada saat yang sama.'},
+ {q:'Before Dewi ___ the library, she had finished her lunch.',o:['has entered','enters','entered','was entering'],a:'entered',k:'sp',e:'Klausa setelah <i>before</i> memakai Verb 2. Makan siang selesai lebih dulu (<i>had finished</i>), masuk perpustakaan menyusul.'},
+ {q:'At 8 p.m. last night, my parents ___ a movie in the living room.',o:['watch','have watched','are watching','were watching'],a:'were watching',k:'pc',e:'Menonton film adalah kegiatan berdurasi yang sedang berlangsung pada pukul 8. Subjek <i>my parents</i> jamak, jadi <i>were</i>.'},
+ {q:'Mia went to bed after she ___ the dishes.',o:['had washed','was washing','washes','has washed'],a:'had washed',k:'pp',e:'Klausa setelah <i>after</i> memakai had + Verb 3. Mencuci piring selesai lebih dulu, lalu Mia tidur (<i>went</i> = Verb 2).'},
+ {q:'My brother ___ a new bag yesterday.',o:['buys','bought','has bought','is buying'],a:'bought',k:'sp',e:'Penanda waktu lampau tunggal, jadi Simple Past. Buy, bought, bought.'},
+ {q:'The movie had already ended by the time we ___ at the cinema.',o:['arrive','have arrived','arrived','will arrive'],a:'arrived',k:'sp',e:'Klausa setelah <i>by the time</i> memakai Verb 2, meskipun posisinya di belakang. Film selesai lebih dulu (<i>had ended</i>).'}];
+add('Kuis',{html:`<div class="wrap" id="quiz"></div>`,init(el){
+  const box=$('#quiz',el);let set,i,score,res;
+  const start=()=>{set=QA.map(x=>({...x,o:shuffle(x.o)}));i=0;score=0;res=[];render()};
+  const pips=()=>`<div class="pips">${set.map((_,k)=>`<span class="pip ${res[k]===true?'ok':res[k]===false?'no':k===i?'cur':''}"></span>`).join('')}</div>`;
+  const render=()=>{
+    if(i>=set.length){SCORE.A=score;if(score>=7)setTimeout(()=>confetti(160),150);const msg=score>=9?'Luar biasa! Penanda waktu sudah kamu kuasai.':score>=7?'Bagus! Tinjau lagi soal yang masih salah.':score>=5?'Cukup. Pakai Tense Finder untuk soal yang salah, lalu coba lagi.':'Pelajari ulang bagian 1–3, lalu coba lagi.';
+      box.innerHTML=`${H('Hasil Latihan A','','')}<div class="score">${score}<span style="font-size:.4em;color:var(--muted)"> / 10</span></div>${pips()}<p class="lead" style="color:var(--text)">${msg}</p><div class="row"><button class="btn primary" id="again">Ulangi (opsi diacak ulang)</button><button class="btn" id="toB">Lanjut ke Latihan B–D ›</button></div>`;
+      $('#again',box).onclick=start;$('#toB',box).onclick=()=>go(cur+1);$('h2',box).remove();return}
+    const x=set[i];
+    box.innerHTML=`<div class="qhead"><span class="eyebrow">Latihan A · Soal ${i+1} dari 10</span><span class="muted small" style="font-weight:800">Skor: ${score}</span></div>${pips()}
+      <p class="qbig">${x.q.replace('___','<span class="blank">___</span>')}</p>
+      <div class="opts">${x.o.map((o,k)=>`<button class="opt" data-o="${k}"><span class="L">${'ABCD'[k]}</span><span>${o}</span></button>`).join('')}</div>
+      <div class="fb" id="qfb"></div><div class="row"><button class="btn primary" id="qnext" style="display:none">${i<9?'Soal berikutnya ›':'Lihat hasil ›'}</button></div>`;
+    $$('[data-o]',box).forEach(b=>b.onclick=()=>{const ok=x.o[+b.dataset.o]===x.a;res[i]=ok;if(ok)score++;
+      $$('[data-o]',box).forEach(bb=>{bb.disabled=true;if(x.o[+bb.dataset.o]===x.a)bb.classList.add('ok')});if(!ok)b.classList.add('no');
+      const f=$('#qfb',box);f.className='fb show '+(ok?'ok':'no');f.innerHTML=`<b>${ok?'Benar!':'Kurang tepat.'}</b> Jawaban: <b>${x.a}</b> <span class="pill ${x.k}">${NAME[x.k]}</span><br>${x.e}`;
+      $('.pips',box).outerHTML=pips();$('#qnext',box).style.display='inline-flex';f.scrollIntoView({behavior:'smooth',block:'nearest'})});
+    $('#qnext',box).onclick=()=>{i++;render();el.scrollTop=0};
+  };
+  box.innerHTML='';start();
+}});
+
+/* ============ LATIHAN B–D (isian) ============ */
+const FILL={
+ B:{t:'Latihan B · Isian',n:'Isi dengan bentuk yang benar dari kata kerja dalam kurung.',items:[
+  ['My cousin ___ (visit) us two weeks ago.',[['visited']],'two weeks ago: Simple Past'],
+  ['While the teacher ___ (explain) the lesson, two students were whispering.',[['was explaining']],'while: was/were + Verb-ing'],
+  ['By the time we ___ (reach) the station, the train had already left.',[['reached']],'Setelah by the time: Verb 2'],
+  ['Nina ___ (cook) dinner when the electricity suddenly went off.',[['was cooking']],'Kegiatan terpotong kejadian mendadak'],
+  ['After the match ___ (end), the fans left the stadium quietly.',[['had ended']],'Setelah after: had + Verb 3'],
+  ['At this time yesterday, we ___ (take) the final exam.',[['were taking']],'At this time yesterday + kegiatan berlangsung; we memakai were'],
+  ['Before she ___ (apply) for the scholarship, Sari had asked her teacher for advice.',[['applied']],'Setelah before: Verb 2'],
+  ['The children ___ (not / finish) their homework by the time their father came home.',[['had not finished',"hadn't finished"]],'By the time + Verb 2 (came): klausa lain had + Verb 3'],
+  ['Hendra ___ (give) a presentation at the seminar last month.',[['gave']],'last month: Simple Past (give, gave)'],
+  ['When the bell rang, the students ___ (already / leave) the classroom.',[['had already left']],'Already + kejadian lampau lain (rang): had + Verb 3']]},
+ C:{t:'Latihan C · Simple Past atau Present Perfect',n:'Isi dengan bentuk yang benar dari kata kerja dalam kurung.',items:[
+  ['We ___ (live) in Surakarta since 2020.',[['have lived']],'since 2020: berlanjut sampai sekarang'],
+  ['Rudi ___ (buy) this laptop three months ago.',[['bought']],'three months ago: Simple Past'],
+  ['___ you ever ___ (visit) Bali?',[['have'],['visited']],'Ever tanpa waktu lampau tunggal: Present Perfect'],
+  ['My sister ___ (not / finish) her homework yet.',[['has not finished',"hasn't finished"]],'Yet: Present Perfect; my sister memakai has'],
+  ['So far, we ___ (finish) three chapters of the book.',[['have finished']],'So far: Present Perfect'],
+  ['The teacher ___ (return) our test papers yesterday.',[['returned']],'yesterday: Simple Past']]},
+ D:{t:'Latihan D · Reported speech, conditional, by + waktu',n:'Isi dengan bentuk yang benar dari kata kerja dalam kurung.',items:[
+  ['"I lost my wallet," Tono said. Tono said that he ___ (lose) his wallet.',[['had lost']],'Kalimat tidak langsung: Simple Past menjadi had + Verb 3'],
+  ['"I have finished the report," Rina said. Rina said that she ___ (finish) the report.',[['had finished']],'Kalimat tidak langsung: Present Perfect menjadi had + Verb 3'],
+  ['If I ___ (study) harder, I would have passed the test.',[['had studied']],'Conditional tipe 3: If + had + Verb 3'],
+  ['If they had left earlier, they ___ (not / miss) the train.',[['would not have missed',"wouldn't have missed"]],'Conditional tipe 3: would have + Verb 3'],
+  ['By 8 p.m. last night, I ___ (finish) all my homework.',[['had finished']],'By + titik waktu lampau: had + Verb 3']]}};
+add('Latihan',{html:`<div class="wrap">
+  ${H('Latihan B–D','','Isi titik-titiknya','Tulis bentuk lengkap tanpa singkatan (<i>had not</i>, bukan <i>hadn’t</i>). Bentuk singkat tetap diterima, tetapi biasakan bentuk lengkap.')}
+  ${ACT('Pilih latihan, isi kotaknya, lalu tekan Periksa.',`<div class="tabs" id="fTabs"></div><div class="stackv" id="fBox"></div>`)}
+</div>`,init(el){
+  const tabs=$('#fTabs',el),box=$('#fBox',el);const state={};
+  const show=key=>{$$('.tab',tabs).forEach(t=>t.setAttribute('aria-selected',t.dataset.k===key));const L=FILL[key];state[key]=state[key]||{};
+    box.innerHTML=`<p class="muted small"><b style="color:var(--text)">${L.t}.</b> ${L.n}</p><p class="small" style="font-weight:800" id="fSc"></p>`;
+    L.items.forEach(([s,ans,why],n)=>{const c=document.createElement('div');c.className='card item';let bi=0;
+      const q=s.replace(/___/g,()=>`<input class="fill" data-b="${bi++}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Isian ${n+1}">`);
+      c.innerHTML=`<p class="q"><span class="num">${n+1}</span>${q}</p><div class="row"><button class="btn sm dark" data-a="chk">Periksa</button><button class="btn sm" data-a="key">Lihat kunci</button></div><div class="fb"></div>`;
+      const ins=$$('.fill',c),fb=$('.fb',c);const prev=state[key][n];if(prev){ins.forEach((x,j)=>x.value=prev.v[j]||'')}
+      const check=()=>{const v=ins.map(x=>x.value);const okEach=v.map((x,j)=>ans[j].some(a=>norm(a)===norm(x)));const ok=okEach.every(Boolean);ins.forEach((x,j)=>x.className='fill '+(okEach[j]?'ok':'no'));
+        const short=ok&&v.some(x=>x.includes("'")||x.includes('’'));fb.className='fb show '+(ok?'ok':'no');fb.innerHTML=ok?`<b>Benar.</b> ${why}.${short?' Ingat: tulis bentuk lengkap tanpa singkatan.':''}`:'<b>Belum tepat.</b> Lihat penanda waktunya, lalu coba lagi.';state[key][n]={v,ok};tally(key)};
+      $('[data-a="chk"]',c).onclick=check;$('[data-a="key"]',c).onclick=()=>{fb.className='fb show info';fb.innerHTML=`<b>Kunci:</b> ${ans.map(a=>a[0]).join(' … ')}. ${why}.`};
+      ins.forEach(x=>x.addEventListener('keydown',e=>{if(e.key==='Enter')check()}));
+      if(prev)check();box.appendChild(c)});tally(key)};
+  const tally=key=>{const s=state[key]||{};const n=Object.values(s).filter(x=>x.ok).length;SCORE[key]=n;const e=$('#fSc',el);if(e)e.textContent=`Benar: ${n} / ${FILL[key].items.length}`};
+  ['B','C','D'].forEach(k=>{const b=document.createElement('button');b.className='tab';b.dataset.k=k;b.textContent='Latihan '+k;b.onclick=()=>show(k);tabs.appendChild(b)});show('B');
+}});
+
+/* ============ LATIHAN E ============ */
+const EX=[['She has visited Yogyakarta last year.','She visited Yogyakarta last year.','Last year menuntut Simple Past'],['By the time the bell rang, the students already left.','By the time the bell rang, the students had already left.','Klausa lain pada by the time: had + Verb 3'],['She did not went to school yesterday.','She did not go to school yesterday.','Setelah did not: Verb 1'],['After he has finished his homework, he played football.','After he had finished his homework, he played football.','Setelah after: had + Verb 3'],['They had went home before the rain started.','They had gone home before the rain started.','Setelah had: Verb 3'],['The students was still chatting when the teacher came in.','The students were still chatting when the teacher came in.','Subjek jamak memakai were']];
+add('Latihan',{html:`<div class="wrap">
+  ${H('Latihan E','','Perbaiki kata kerja yang salah','Tulis ulang kalimatnya dengan memperbaiki <b>kata kerjanya saja</b>. Jangan ubah penanda waktu atau kata penghubungnya.')}
+  ${ACT('Ketik kalimat yang sudah diperbaiki, lalu tekan Periksa.',`<p class="small" style="font-weight:800" id="eSc">Benar: 0 / 6</p><div class="stackv" id="eBox"></div>`)}
+</div>`,init(el){
+  const box=$('#eBox',el);const ok={};
+  EX.forEach(([w,r,why],n)=>{const c=document.createElement('div');c.className='card item';c.innerHTML=`<p><span class="num">${n+1}</span><b>${w}</b></p><input class="line-in" autocomplete="off" autocapitalize="sentences" spellcheck="false" aria-label="Perbaikan kalimat ${n+1}" placeholder="Tulis kalimat yang benar…"><div class="row"><button class="btn sm dark" data-a="chk">Periksa</button><button class="btn sm" data-a="key">Lihat kunci</button><button class="btn sm" data-a="cp">Salin kalimat</button></div><div class="fb"></div>`;
+    const inp=$('input',c),fb=$('.fb',c);
+    const check=()=>{const g=norm(inp.value)===norm(r);ok[n]=g;inp.style.borderColor=g?'var(--ok)':'var(--bad)';inp.style.background=g?'var(--ok-bg)':'var(--bad-bg)';fb.className='fb show '+(g?'ok':'no');fb.innerHTML=g?`<b>Benar.</b> ${why}.`:'<b>Belum tepat.</b> Ubah kata kerjanya saja, tanpa singkatan.';const s=Object.values(ok).filter(Boolean).length;SCORE.E=s;$('#eSc',el).textContent=`Benar: ${s} / 6`;if(s===6)confetti(80)};
+    $('[data-a="chk"]',c).onclick=check;$('[data-a="key"]',c).onclick=()=>{fb.className='fb show info';fb.innerHTML=`<b>Kunci:</b> ${r} <span class="muted">(${why})</span>`};$('[data-a="cp"]',c).onclick=()=>{inp.value=w;inp.focus()};inp.addEventListener('keydown',e=>{if(e.key==='Enter')check()});box.appendChild(c)});
+}});
+
+/* ============ LATIHAN F ============ */
+add('Latihan',{html:`<div class="wrap">
+  ${H('Latihan F','','Tulis enam kalimatmu sendiri','Tentang pengalaman nyata atau karangan. Setiap kalimat bernilai 0–2: <b>1 poin</b> bila penanda/kata penghubung dan pola klausanya sesuai rumus, <b>1 poin</b> bila bentuk kata kerjanya benar.')}
+  ${ACT('Tulis kalimat, lalu centang sendiri setiap poin yang sudah terpenuhi.',`<p class="small" style="font-weight:800" id="fScore">Skor: 0 / 12</p><div class="stackv" id="wBox"></div>
+    <button class="btn sm" id="fEx" style="align-self:flex-start">Lihat contoh jawaban</button>
+    <div class="card reveal" id="fExBox"><p><span class="pill sp">Simple Past</span> I visited my grandmother last weekend. We watched a film two days ago.</p><p style="margin-top:8px"><span class="pill pc">Past Continuous</span> I was reading a book when my friend called. While my mother was cooking, I was cleaning the room.</p><p style="margin-top:8px"><span class="pill pp">Past Perfect</span> By the time I got to school, the class had started. After I had finished my homework, I went to bed.</p></div>`)}
+  <p class="foot">Tulisan tidak disimpan. Salin ke buku tugas sebelum menutup halaman.</p>
+</div>`,init(el){
+  const W=[['sp','Simple Past dengan penanda waktu lampau (yesterday, last …, … ago)'],['sp','Simple Past dengan penanda waktu lampau (yang lain)'],['pc','Past Continuous dengan when'],['pc','Past Continuous dengan while'],['pp','Past Perfect dengan by the time atau before'],['pp','Past Perfect dengan after']];
+  const box=$('#wBox',el);
+  W.forEach(([k,lab],n)=>{const c=document.createElement('div');c.className='card item tcard '+k;c.innerHTML=`<p class="small" style="font-weight:800"><span class="num">${n+1}</span>${lab}</p><textarea class="line-in" aria-label="Kalimat ${n+1}" placeholder="Tulis kalimatmu…"></textarea><div class="row" style="gap:16px"><label class="check"><input type="checkbox"> Pola sesuai rumus</label><label class="check"><input type="checkbox"> Kata kerja benar</label></div>`;box.appendChild(c)});
+  const upd=()=>{const s=$$('input[type=checkbox]',box).filter(x=>x.checked).length;SCORE.F=s;$('#fScore',el).textContent=`Skor: ${s} / 12`};
+  box.addEventListener('change',upd);$('#fEx',el).onclick=()=>$('#fExBox',el).classList.toggle('show');
+}});
+
+/* ============ SELESAI ============ */
+add('Selesai',{html:`<div class="wrap">
+  ${H('Selesai','','Rekap nilai latihanmu','Satu butir benar bernilai 1 poin. Jumlah maksimal 49. Nilai = poin ÷ 49 × 100.')}
+  <div class="card" id="rekap"></div>
+  <div class="grid3">
+    <div class="card tcard sp"><span class="pill sp">Simple Past</span><p style="margin-top:8px">S + Verb 2 · yesterday, last …, … ago</p></div>
+    <div class="card tcard pc"><span class="pill pc">Past Continuous</span><p style="margin-top:8px">S + was/were + V-ing · while, when, titik waktu</p></div>
+    <div class="card tcard pp"><span class="pill pp">Past Perfect</span><p style="margin-top:8px">S + had + V3 · by the time, before, after</p></div>
+  </div>
+  <div class="row"><button class="btn" data-go="0">Kembali ke awal</button><button class="btn primary" data-goch="Strategi">Buka Tense Finder</button></div>
+</div>`,show(el){
+  const R=[['Latihan A (pilihan ganda)',SCORE.A,10,'Kuis'],['Latihan B (isian)',SCORE.B,10],['Latihan C (Simple Past / Present Perfect)',SCORE.C,6],['Latihan D (lanjutan)',SCORE.D,5],['Latihan E (perbaikan)',SCORE.E,6],['Latihan F (menulis, nilai sendiri)',SCORE.F,12]];
+  const tot=R.reduce((a,r)=>a+(r[1]||0),0);
+  $('#rekap',el).innerHTML=`<div class="scroll"><table class="tbl"><thead><tr><th>Latihan</th><th style="text-align:right">Poin</th></tr></thead><tbody>${R.map(r=>`<tr><td>${r[0]}${r[1]===null?' <span class="muted small">(belum selesai)</span>':''}</td><td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:800;white-space:nowrap">${r[1]??0} / ${r[2]}</td></tr>`).join('')}</tbody></table></div><div class="row" style="justify-content:space-between;margin-top:12px;align-items:baseline"><span class="eyebrow">Nilai akhir</span><span class="score" style="font-size:clamp(2.6rem,9vw,4rem)">${Math.round(tot/49*100)}</span></div><p class="muted small">${tot} dari 49 poin.</p>`;
+}});
+
+/* ============ engine ============ */
+const stage=$('#stage'),rail=$('#rail');let cur=0;
+const chapters=[...new Set(slides.map(s=>s.ch))];
+chapters.forEach(c=>{const b=document.createElement('button');b.className='chip';b.innerHTML=`<i></i>${c}`;b.onclick=()=>go(slides.findIndex(s=>s.ch===c));rail.appendChild(b)});
+slides.forEach((s,k)=>{const sec=document.createElement('section');sec.className='slide';sec.setAttribute('aria-label',`Slide ${k+1}`);sec.innerHTML=s.html;stage.appendChild(sec);s.el=sec;if(s.init)s.init(sec)});
+document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){go(+g.dataset.go);return}const c=e.target.closest('[data-goch]');if(c){go(slides.findIndex(s=>s.ch===c.dataset.goch));return}const g2=e.target.closest('[data-gid]');if(g2)go(slides.findIndex(s=>s.id===g2.dataset.gid))});
+function go(k){k=Math.max(0,Math.min(slides.length-1,k));const back=k<cur;slides[cur].el.classList.remove('on','back');cur=k;const el=slides[k].el;el.classList.toggle('back',back);el.classList.add('on');el.scrollTop=0;
+  if(slides[k].show)slides[k].show(el);
+  const ci=chapters.indexOf(slides[k].ch);$$('.chip',rail).forEach((c,j)=>{c.classList.toggle('on',j===ci);c.classList.toggle('done',j<ci)});
+  const on=$$('.chip',rail)[ci];if(on)rail.scrollLeft=on.offsetLeft-rail.clientWidth/2+on.offsetWidth/2;
+  $('#count').textContent=`${k+1} / ${slides.length}`;$('#navmid').textContent=slides[k].ch;$('#bar').style.width=`${(k+1)/slides.length*100}%`;
+  $('#prev').disabled=k===0;$('#next').disabled=k===slides.length-1;try{history.replaceState(null,'',`#s${k+1}`)}catch(e){}}
+$('#prev').onclick=()=>go(cur-1);$('#next').onclick=()=>go(cur+1);
+document.addEventListener('keydown',e=>{if(e.target.closest('input,textarea'))return;if(e.key==='ArrowRight'||e.key==='PageDown')go(cur+1);else if(e.key==='ArrowLeft'||e.key==='PageUp')go(cur-1);else if(e.key==='f'||e.key==='F')toggleFS()});
+let sx=0,sy=0,st=0;
+stage.addEventListener('touchstart',e=>{const t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now()},{passive:true});
+stage.addEventListener('touchend',e=>{if(e.target.closest('input,textarea,.scroll,.tabs'))return;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5&&Date.now()-st<700)go(cur+(dx<0?1:-1))},{passive:true});
+/* fullscreen */
+const inFrame=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+const url=location.href.split('#')[0];$('#fsOpen').href=url;$('#newtab').href=url;if(inFrame)$('#newtab').style.display='inline-flex';
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+const fsOK=()=>!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+function fallback(){$('#fsModal').classList.add('show');$('#fsOpen').focus()}
+function toggleFS(){const d=document,el=d.documentElement;if(fsEl()){(d.exitFullscreen||d.webkitExitFullscreen).call(d);return}
+  const req=el.requestFullscreen||el.webkitRequestFullscreen;if(!req||!fsOK()){fallback();return}
+  try{const p=req.call(el,{navigationUI:'hide'});if(p&&p.catch)p.catch(fallback)}catch(e){fallback()}}
+function fsUI(){const on=!!fsEl();$('#fsLbl').textContent=on?'Keluar':'Layar penuh';$('#fsIcon').innerHTML=on?'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>':'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'}
+$('#fsBtn').onclick=toggleFS;document.addEventListener('fullscreenchange',fsUI);document.addEventListener('webkitfullscreenchange',fsUI);
+$('#fsClose').onclick=()=>$('#fsModal').classList.remove('show');$('#fsModal').onclick=e=>{if(e.target.id==='fsModal')$('#fsModal').classList.remove('show')};
+const m=location.hash.match(/^#s(\d+)$/);go(m?(+m[1]-1):0);
+</script>
+</body>
+</html>
